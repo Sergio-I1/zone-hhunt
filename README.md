@@ -2,7 +2,9 @@
 
 Real-life hide-and-seek on a live map. One person creates a game, everyone else joins with the 6-letter code.
 
-- Hider and seeker roles, four game modes
+- Hider and seeker roles, five game modes including Freeze Tag
+- Lives: a tag costs one life and gives the hider time to escape
+- Power-ups on the map: Extra life, Jammer, Ghost, Rat, Decoy, Name swap
 - Time limits and a zone that shrinks during the game
 - Each phone uses its own GPS; messages are encrypted with the game code
 

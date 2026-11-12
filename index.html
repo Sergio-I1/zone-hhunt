@@ -142,6 +142,18 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .endcard dt{color:var(--muted)} .endcard dd{margin:0;font-weight:600}
 .endbtns{display:flex;gap:8px;flex-wrap:wrap}
 
+.status{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hearts{font-size:22px;letter-spacing:3px;color:var(--seeker);line-height:1}
+.hearts s{text-decoration:none;opacity:.25}
+.buffs{font-size:12.5px;color:var(--muted);font-weight:600}
+.pu{border:1.5px solid var(--zone);background:transparent;border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px}
+.act.thaw{background:var(--hider)}
+.jam{inset:0;z-index:1150;display:grid;place-items:center;padding:20px;background:repeating-linear-gradient(45deg,#18211c,#18211c 12px,#232e27 12px,#232e27 24px);color:#fff;font-family:var(--font-display);font-weight:900;font-size:34px;text-transform:uppercase;text-align:center}
+.sheet{inset:auto 0 0 0;z-index:1300;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right)) 16px max(16px,env(safe-area-inset-left));display:grid;gap:12px;box-shadow:0 -10px 30px rgba(0,0,0,.3);max-height:80%;overflow:auto}
+.sheet h3{margin:0;font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase}
+.sheet .choices{display:flex;flex-wrap:wrap;gap:8px}
+.check b{color:var(--ink)}
+.item{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--zone);display:grid;place-items:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -223,6 +235,19 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"><small>Number of times the circle closes in.</small></div>
           </div>
         </section>
+        <section class="sec"><h2>Tagging</h2>
+          <div class="sliders">
+            <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags a hider can take. "I got caught" always ends it at once.</small></div>
+            <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>After a tag, the hider can't be tagged again for this long.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close a seeker must be for the Tag button to work.</small></div>
+          </div>
+        </section>
+        <section class="sec"><h2>Extras</h2>
+          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b> Five appear in the zone. Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
+          <div class="sliders"><div class="slider" id="pdurWrap"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div></div>
+          <label class="check"><input type="checkbox" id="cNames"> <span><b>Show names on pings.</b> Off means seekers see a ping but not whose it is.</span></label>
+          <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
+        </section>
       </fieldset>
 
       <div class="field">
@@ -251,6 +276,13 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <div class="over legend" aria-hidden="true">
         <span><i class="mark hider"></i>Hider</span><span><i class="mark seeker"></i>Seeker</span><span><i class="ring"></i>Next zone</span>
       </div>
+      <div class="over jam" id="jam" hidden></div>
+      <div class="over sheet" id="sheet" hidden>
+        <h3 id="shTitle"></h3>
+        <div class="choices" id="shChoices"></div>
+        <input class="text" id="shInput" autocomplete="off" hidden>
+        <div class="endbtns"><button class="act go" type="button" id="shOk">OK</button><button class="ghost" type="button" id="shCancel">Cancel</button></div>
+      </div>
       <div class="over endwrap" id="endWrap" hidden>
         <div class="endcard">
           <h2 id="endTitle"></h2>
@@ -265,7 +297,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       </div>
     </div>
     <div class="dock">
+      <div class="status"><span class="hearts" id="hearts" aria-label="Lives"></span><span class="status" id="inv"></span><span class="buffs" id="buffs"></span></div>
       <div class="actions">
+        <button class="act thaw" type="button" id="thawBtn" hidden>Unfreeze</button>
         <button class="act tag" type="button" id="tagBtn" hidden>Tag hider</button>
         <button class="act caught" type="button" id="caughtBtn" hidden>I got caught</button>
         <button class="act join" type="button" id="turnBtn" hidden>Turn into a seeker</button>
@@ -296,13 +330,23 @@ const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884
 const QS = new URLSearchParams(location.search);
 const BROKER_OVERRIDE = QS.get("broker");
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const TAG_R = 15, SIGHT = 30, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000;
+const SIGHT0 = 30, PICK_R = 12, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000;
 const MODES = {
   classic:  {name:"Classic",            blurb:"Seekers hunt, caught hiders are out. Hiders' spots ping on the map every few minutes."},
   infection:{name:"Infection",          blurb:"Every caught hider turns into a seeker. The hunt snowballs."},
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
-  zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."}
+  zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."},
+  freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen."}
 };
+const ITEMS = {
+  life:  {icon:"❤️", name:"Extra life"},
+  jam:   {icon:"📡", name:"Jammer"},
+  ghost: {icon:"👻", name:"Ghost"},
+  rat:   {icon:"🐀", name:"Rat"},
+  decoy: {icon:"📍", name:"Decoy"},
+  swap:  {icon:"🎭", name:"Name swap"}
+};
+const tagR = () => (cfg && cfg.tagR) || 20, sight = () => Math.max(SIGHT0, tagR());
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
@@ -321,13 +365,18 @@ const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
 /* ---------------- me & shared state ---------------- */
 const saved = store.get("zh-session", sessionStorage) || {};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
-             lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider" };
+             lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"" };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
-            pings:[], log:[], liveSince:0 };
+            pings:[], log:[], liveSince:0,
+            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, thawTarget:null, shChoices:[] };
+const dn = p => (me.role === "seeker" && p.role === "hider" && p.alias) ? p.alias : p.name;   // name swap fools seekers only
+if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
-function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null}, sessionStorage); }
+function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null,
+  x:{lives:me.lives, safeUntil:me.safeUntil, ghostUntil:me.ghostUntil, alias:me.alias, inv:me.inv, took:me.took, fcode:me.fcode}}, sessionStorage); }
 
 /* ---------------- network ---------------- */
 const N = { client:null, key:null, base:null, onCfg:null };
@@ -382,13 +431,15 @@ function closeNet(){ const c = N.client; N.client = null; if (c) try { c.end(tru
 let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
-  const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub};
+  const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
+             lives:me.lives, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
   const old = players.get(p.id);
   if (old && old.ts > p.ts) return;
   players.set(p.id, {...p, seen: Date.now()});
+  if (p.took) for (const i of p.took) if (!G.taken.has(i)) G.taken.set(i, p.id);
 }
 function applyCfg(c){
   if (cfg && c.rev <= cfg.rev) return;
@@ -403,9 +454,28 @@ function onEvent(m){
     case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
     case "bye": if (m.from !== me.id) players.delete(m.from); break;
     case "role": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.role = m.role; pubMe(); } break;
-    case "tag": if (m.to === me.id) gotCaught(m.from); break;
+    case "tag": if (m.to === me.id) loseLife(m.from); break;
+    case "hit": addLog(nameOf(m.by) + " tagged " + nameOf(m.id) + " · " + m.left + (m.left === 1 ? " life" : " lives") + " left");
+      if (m.by === me.id) toast("Tagged " + nameOf(m.id) + " · " + m.left + " left"); break;
+    case "thaw":
+      if (m.to === me.id && me.st === "frozen"){
+        if (String(m.code) === me.fcode){ me.st = "active"; me.lives = cfg.freezeReset ? cfg.lives : 1; me.safeUntil = Date.now() + cfg.grace*1000; me.fcode = "";
+          ev({t:"thawed", id:me.id, by:m.from}); pubMe(); toast("Unfrozen! Run"); }
+        else ev({t:"nope", to:m.from});
+      } break;
+    case "thawed": addLog(nameOf(m.by) + " unfroze " + nameOf(m.id)); break;
+    case "nope": if (m.to === me.id) toast("Wrong code"); break;
+    case "take":
+      if (!G.taken.has(m.item)){ G.taken.set(m.item, m.from);
+        const it = ((cfg && cfg.items) || []).find(i => i.id === m.item);
+        if (m.from === me.id && it){ me.took.push(it.id); if (me.role === "hider") grant(it.type); else toast("Power-up destroyed"); pubMe(); }
+        addLog("A power-up was taken"); } break;
+    case "jam": G.jamUntil = m.until; addLog("Seekers' maps are jammed for " + cfg.pdur + " s"); break;
+    case "rat": G.rats.set(m.id, m.until); addLog("A hider was ratted out");
+      if (m.id === me.id) toast("You were ratted out! Seekers can see you"); else if (me.role === "seeker") toast(nameOf(m.id) + " was ratted out"); break;
+    case "decoy": G.pings.push({lat:m.lat, lng:m.lng, name: cfg.pingNames ? String(m.name || "").slice(0, 16) : "", until:m.until, id:m.id}); break;
     case "caught":
-      addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : " got caught"));
+      addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : m.fz ? " froze " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : m.fz ? " is frozen" : " got caught"));
       if (m.by === me.id){ me.tags++; pubMe(); toast("You got " + nameOf(m.id)); }
       break;
     case "zoneout": addLog(nameOf(m.id) + " was eliminated by the zone"); break;
@@ -451,7 +521,8 @@ async function createGame(){
   for (idx = 0; idx < urls.length; idx++){ try { c = await connect(urls[idx]); break; } catch(e){} }
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
-  cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null};
+  cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
+         lives:2, grace:30, tagR:20, powerups:true, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -490,12 +561,14 @@ function show(which){
 function onPhase(prev){
   const s = store.get("zh-session", sessionStorage) || {};
   if (cfg.phase === "lobby"){
-    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; pubMe(); }
+    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; me.alias = ""; me.ghostUntil = 0; me.safeUntil = 0; me.inv = []; me.took = []; pubMe(); }
     else if (prev === null && s.code === code && s.role){ me.role = s.role; }
     $("#endWrap").hidden = true; userMoved = false; show("lobby"); renderLobby(true);
   } else {
     if (prev !== "live" && prev !== "over"){
-      if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; }
+      Object.assign(me, {lives:cfg.lives, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:""});
+      G.rats.clear(); G.taken.clear(); G.pend.clear(); G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
+      if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; Object.assign(me, s.x || {}); }
       else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; }
       else { me.st = "caught"; me.lobbyRole = me.role; }           // walked into a game already running: spectate
       me.outSince = null; G.pings = []; G.log = []; G.lastPingIdx = null; G.announced = 0; G.winner = null;
@@ -510,7 +583,9 @@ function onPhase(prev){
 
 /* ---------------- lobby ---------------- */
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
-            ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"]];
+            ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
+            ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"]];
+const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"]];
 function buildLobbyControls(){
   const box = $("#modes");
   for (const [k, m] of Object.entries(MODES)){
@@ -525,6 +600,7 @@ function buildLobbyControls(){
     if (key === "startR" && cfg.endR >= patch.startR) patch.endR = Math.max(15, patch.startR - 25);
     hostSet(patch);
   });
+  for (const [cid, key] of CK) $("#" + cid).addEventListener("change", e => isHost() && hostSet({[key]: e.target.checked}));
 }
 let rosterSig = "";
 function renderLobby(force){
@@ -535,6 +611,9 @@ function renderLobby(force){
   for (const [sid, oid, key, f] of SL){ const el = $("#" + sid); if (document.activeElement !== el || !host) el.value = cfg[key]; $("#" + oid).textContent = f(cfg[key]); }
   const r = $("#mode-" + cfg.mode); if (r) r.checked = true;
   const noPing = cfg.mode === "manhunt"; $("#pingWrap").classList.toggle("off", noPing); $("#sPing").disabled = noPing;
+  for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
+  $("#pdurWrap").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
+  $("#refillWrap").hidden = cfg.mode !== "freeze";
   $("#shuffleBtn").hidden = !host; $("#centerBtn").hidden = !host;
   $("#rosterHint").textContent = host ? "tap a role to switch it" : "tap your role to switch it";
   $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
@@ -578,7 +657,14 @@ function startGame(){
     const a = Math.random()*Math.PI*2, d = Math.sqrt(Math.random())*(prev.r - r)*0.9;
     zones.push({...offset(prev, Math.cos(a)*d, Math.sin(a)*d), r});
   }
-  hostSet({phase:"live", zones, t0: Date.now() + 4000, winner:null, endedAt:null}, true);
+  let items = null;
+  if (cfg.powerups){
+    const pool = Object.keys(ITEMS).filter(k => !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
+    const off = Math.floor(Math.random()*pool.length); items = [];
+    for (let i = 0; i < 5; i++){ const a = Math.random()*Math.PI*2, d = (0.25 + 0.6*Math.sqrt(Math.random()))*cfg.startR;
+      items.push({id:"i" + i, type: pool[(i + off) % pool.length], ...offset(cfg.center, Math.cos(a)*d, Math.sin(a)*d)}); }
+  }
+  hostSet({phase:"live", zones, items, t0: Date.now() + 4000, winner:null, endedAt:null}, true);
 }
 
 /* ---------------- zone timeline ---------------- */
@@ -597,22 +683,40 @@ function zoneAt(t){
 
 /* ---------------- game rules ---------------- */
 function canSee(p){
-  if (p.id === me.id || G.over || me.st !== "active" || p.st !== "active" || p.role === me.role) return true;
+  if (p.id === me.id || G.over || (me.st !== "active" && me.st !== "frozen") || p.st !== "active" || p.role === me.role) return true;
+  if (p.role === "hider" && p.ghost > Date.now()) return false;
   if (!G.hunt) return p.role === "seeker";
+  if (p.role === "hider" && G.rats.get(p.id) > Date.now()) return true;
   if (cfg.mode === "manhunt") return true;
   const d = dist(me, p);
   if (p.role === "seeker") return d <= ALERT;
-  return d <= SIGHT || dist(p, G.zi.cur) > G.zi.cur.r;
+  return d <= sight() || dist(p, G.zi.cur) > G.zi.cur.r;
 }
 function nearestOf(role){ let best = null, bd = Infinity; const now = Date.now();
-  for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
+  for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE || (p.role !== me.role && p.ghost > now)) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
   return best ? {p:best, d:bd} : null; }
-function gotCaught(by){
-  if (!cfg || cfg.phase !== "live" || me.role !== "hider" || me.st !== "active" || !G.hunt) return;
-  const inf = cfg.mode === "infection";
-  if (inf){ me.role = "seeker"; toast("You've been turned into a seeker"); } else { me.st = "caught"; toast("You got caught"); }
-  me.outSince = null; ev({t:"caught", id:me.id, by: by || null, inf}); pubMe();
+const canBeHit = () => cfg && cfg.phase === "live" && me.role === "hider" && me.st === "active" && G.hunt;
+function loseLife(by){                       // a seeker's Tag button: costs one life, then you get escape time
+  if (!canBeHit() || Date.now() < me.safeUntil) return;
+  if (me.lives <= 1) return gotCaught(by);
+  me.lives--; me.safeUntil = Date.now() + cfg.grace*1000;
+  toast("Tagged! " + cfg.grace + " s to get away"); ev({t:"hit", id:me.id, by, left:me.lives}); pubMe();
 }
+function gotCaught(by){                      // out of lives, or "I got caught"
+  if (!canBeHit()) return;
+  const inf = cfg.mode === "infection", fz = cfg.mode === "freeze"; me.lives = 0;
+  if (inf){ me.role = "seeker"; toast("You've been turned into a seeker"); }
+  else if (fz){ me.st = "frozen"; me.fcode = String(100 + Math.floor(Math.random()*900)); toast("You're frozen"); }
+  else { me.st = "caught"; toast("You got caught"); }
+  me.outSince = null; ev({t:"caught", id:me.id, by: by || null, inf, fz}); pubMe();
+}
+function grant(type){
+  if (type === "life"){ me.lives = Math.min(cfg.lives + 1, me.lives + 1); toast("❤️ Extra life"); }
+  else { me.inv.push(type); toast(ITEMS[type].icon + " Got " + ITEMS[type].name); }
+}
+function nearestFrozen(){ let best = null, bd = tagR(); const now = Date.now();
+  for (const p of players.values()){ if (p.id === me.id || p.role !== "hider" || p.st !== "frozen" || now - p.seen > STALE) continue; const d = dist(me, p); if (d <= bd){ bd = d; best = p; } }
+  return best; }
 function calcWinner(t, end){
   const now = Date.now(); let free = 0;
   for (const p of players.values()) if (p.role === "hider" && p.st === "active" && now - p.seen < 120000) free++;
@@ -636,7 +740,7 @@ function showEnd(w){
   $("#endSub").textContent = w === "hiders" ? (free.length ? free.map(p => p.name).join(", ") + " stayed free." : "The hiders held out.") : "Every hider was found.";
   const rows = [["Mode", MODES[cfg.mode].name], ["Hunt time", fmt(Math.max(0, Math.min(endT, cfg.head + cfg.minutes*60) - cfg.head))],
                 ["Top tagger", top ? top.name + " (" + top.tags + ")" : "Nobody"],
-                ["You", me.st === "active" ? (me.role === "hider" ? "Survived" : "Seeker to the end") : me.st === "caught" ? "Caught" : "Eliminated"]];
+                ["You", me.st === "active" ? (me.role === "hider" ? "Survived" : "Seeker to the end") : me.st === "caught" ? "Caught" : me.st === "frozen" ? "Frozen" : "Eliminated"]];
   $("#endStats").innerHTML = rows.map(r => "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
   $("#againBtn").hidden = !isHost(); $("#endWait").hidden = isHost();
   $("#endWrap").hidden = false;
@@ -662,7 +766,7 @@ function tick(){
       if (G.lastPingIdx == null) G.lastPingIdx = idx;
       else if (idx > G.lastPingIdx){
         G.lastPingIdx = idx;
-        for (const p of players.values()) if (p.role === "hider" && p.st === "active" && p.lat != null && p.id !== me.id) G.pings.push({lat:p.lat, lng:p.lng, name:p.name, at:now, id:p.id + idx});
+        for (const p of players.values()) if (p.role === "hider" && p.st === "active" && p.lat != null && p.id !== me.id && !(p.ghost > now)) G.pings.push({lat:p.lat, lng:p.lng, name: cfg.pingNames ? (p.alias || p.name) : "", until: now + PING_SHOW*1000, id:p.id + idx});
         addLog("Ping! Every hider's spot just flashed on the seekers' map.");
         toast(me.role === "hider" && me.st === "active" ? "Ping! Seekers saw your spot" : "Ping! Hiders revealed");
       }
@@ -674,13 +778,18 @@ function tick(){
           me.st = "out"; me.outSince = null; toast("The zone got you"); ev({t:"zoneout", id:me.id}); pubMe(); }
       } else me.outSince = null;
     }
+    if (cfg.items && me.st === "active" && t >= 0 && me.lat != null) for (const it of cfg.items){
+      if (G.taken.has(it.id) || dist(me, it) > PICK_R || now - (G.pend.get(it.id) || 0) < 3000) continue;
+      G.pend.set(it.id, now); ev({t:"take", item:it.id});
+    }
     const w = calcWinner(t, end);
     if (w){ if (isHost()) hostSet({phase:"over", winner:w, endedAt:now}, true); else showEnd(w); }
     else if (G.over || !$("#endWrap").hidden){ G.over = false; G.winner = null; $("#endWrap").hidden = true; }
   }
-  G.pings = G.pings.filter(p => now - p.at < PING_SHOW*1000);
+  G.pings = G.pings.filter(p => now < p.until);
   hud(t, end); renderMap();
 }
+let invSig = "";
 function hud(t, end){
   const zi = G.zi, over = cfg.phase === "over" || G.over, pre = t < 0;
   $("#hPhase").textContent = over ? "Final" : pre ? "Get ready" : G.hunt ? "Hunt" : "Hide · seekers wait";
@@ -690,37 +799,49 @@ function hud(t, end){
   $("#hPing").textContent = cfg.mode === "manhunt" ? "Manhunt: everyone is visible" : (me.role === "hider" && me.st === "active" ? "Your spot pings in " : "Next hider ping in ") + fmt(nextPing - t);
   const chip = $("#hRole"), gone = me.st !== "active";
   chip.className = "chip " + (gone ? "out" : me.role);
-  chip.textContent = gone ? (me.st === "caught" ? "Caught" : "Out") : me.role === "hider" ? "Hider" : "Seeker";
+  chip.textContent = gone ? (me.st === "caught" ? "Caught" : me.st === "frozen" ? "Frozen" : "Out") : me.role === "hider" ? "Hider" : "Seeker";
 
   let free = 0, seekers = 0;
   for (const p of players.values()){ if (p.role === "hider" && p.st === "active") free++; if (p.role === "seeker" && p.st === "active") seekers++; }
   $("#counts").innerHTML = "<b>" + free + "</b> hider" + (free === 1 ? "" : "s") + " free · <b>" + seekers + "</b> seeker" + (seekers === 1 ? "" : "s");
 
   let txt = "", kind = "";
-  if (!over && me.st === "active" && !pre){
-    if (me.outSince && G.hunt){ kind = "zone";
+  if (!over && me.st === "frozen"){ kind = "spot"; txt = "Frozen · your code is " + me.fcode; }
+  else if (!over && me.st === "active" && !pre){
+    if (me.role === "hider" && Date.now() < me.safeUntil){ kind = "danger"; txt = "Tagged! Get away · safe for " + fmt((me.safeUntil - Date.now())/1000); }
+    else if (me.outSince && G.hunt){ kind = "zone";
       txt = me.role === "seeker" ? "Outside the zone · get back in" : cfg.mode === "zone" ? "Outside the zone · out in " + fmt(OUT_GRACE - (Date.now() - me.outSince)/1000) : "Outside the zone · seekers can see you"; }
     else if (me.role === "hider" && G.hunt){ const n = nearestOf("seeker"); if (n && n.d <= ALERT){ kind = "danger"; txt = "Seeker nearby · " + Math.round(n.d) + " m"; } }
     else if (me.role === "seeker"){
       if (!G.hunt){ kind = "zone"; txt = "Stay at base · released in " + fmt(cfg.head - t); }
-      else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= SIGHT*1.6){ kind = "spot"; txt = n.d <= TAG_R ? "In reach · tag " + n.p.name + "!" : "Hider spotted · " + Math.round(n.d) + " m"; } }
+      else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= sight()*1.6){ kind = "spot"; txt = n.d <= tagR() ? "In reach · tag " + dn(n.p) + "!" : "Hider spotted · " + Math.round(n.d) + " m"; } }
     }
   }
   const al = $("#alert"); al.hidden = !txt; al.textContent = txt; al.className = "over alert " + kind;
 
-  const reach = nearestOf("hider"), tb = $("#tagBtn");
+  const reach = nearestOf("hider"), tb = $("#tagBtn"), inR = !!(reach && reach.d <= tagR() && G.hunt), safe = inR && reach.p.safe > Date.now();
   tb.hidden = !(me.role === "seeker" && me.st === "active") || over;
-  tb.disabled = !G.hunt || !(reach && reach.d <= TAG_R);
-  tb.textContent = reach && reach.d <= TAG_R && G.hunt ? "Tag " + reach.p.name : "Tag hider";
+  tb.disabled = !inR || safe;
+  tb.textContent = safe ? dn(reach.p) + " is safe " + fmt((reach.p.safe - Date.now())/1000) : inR ? "Tag " + dn(reach.p) : "Tag hider";
+  const hid = me.role === "hider" && me.st === "active" && !over, nowH = Date.now();
+  $("#hearts").innerHTML = me.role === "hider" && !over ? "♥".repeat(Math.max(0, me.lives)) + "<s>" + "♥".repeat(Math.max(0, cfg.lives - me.lives)) + "</s>" : "";
+  const isig = hid ? me.inv.join() : "-";
+  if (isig !== invSig){ invSig = isig; $("#inv").innerHTML = hid ? me.inv.map((k, i) => '<button class="pu" type="button" data-i="' + i + '">' + ITEMS[k].icon + " " + ITEMS[k].name + "</button>").join("") : ""; }
+  $("#buffs").textContent = [hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.alias ? "🎭 Seekers see you as " + me.alias : "",
+                             hid && G.rats.get(me.id) > nowH ? "🐀 Exposed " + fmt((G.rats.get(me.id) - nowH)/1000) : ""].filter(Boolean).join(" · ");
+  const fzn = hid && cfg.mode === "freeze" ? nearestFrozen() : null, th = $("#thawBtn");
+  G.thawTarget = fzn; th.hidden = !fzn; if (fzn) th.textContent = "Unfreeze " + fzn.name;
+  const jam = $("#jam"), jl = (G.jamUntil - nowH)/1000;
+  jam.hidden = !(me.role === "seeker" && me.st === "active" && jl > 0 && !over); if (!jam.hidden) jam.textContent = "Signal jammed · " + fmt(jl);
   $("#caughtBtn").hidden = !(me.role === "hider" && me.st === "active" && G.hunt) || over;
-  $("#turnBtn").hidden = !(me.st !== "active" && cfg.mode !== "infection") || over;
+  $("#turnBtn").hidden = !(me.st !== "active" && cfg.mode !== "infection" && cfg.mode !== "freeze") || over;
   $("#endBtn").hidden = !isHost() || cfg.phase !== "live";
   $("#gpsOut").textContent = test ? "Test mode · tap map to move" : gpsErr || (me.acc != null ? "GPS ±" + Math.round(me.acc) + " m" : "GPS …");
 }
 
 /* ---------------- map ---------------- */
 let Lz, Ln, Ls, shadeKey = "", fitKey = "";
-const markers = new Map(), pingMarkers = new Map();
+const markers = new Map(), pingMarkers = new Map(), itemMarkers = new Map();
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function initMap(){
   map = L.map("map", {zoomControl:false}).setView([29.8884, -97.9384], 16);
@@ -732,6 +853,7 @@ function initMap(){
   map.on("dragstart", () => { follow = false; userMoved = true; });
   map.on("click", e => {
     if (!cfg) return;
+    if (G.armed && cfg.phase === "live"){ G.armed = false; return placeDecoy(e.latlng); }
     if (cfg.phase === "lobby" && isHost()) return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}});
     if (test){ me.lat = e.latlng.lat; me.lng = e.latlng.lng; pubMe(); tick(); }
   });
@@ -755,19 +877,24 @@ function renderMap(){
   for (const p of players.values()){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     seen.add(p.id);
-    const sig = [p.role, p.st, p.name, now - p.seen > STALE].join("|");
+    const sig = [p.role, p.st, dn(p), now - p.seen > STALE].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + p.role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(p.name)) + "</b><i></i></div>"})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + p.role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "")) + "</b><i></i></div>"})); }
     m.setLatLng([p.lat, p.lng]);
   }
   for (const [id, m] of markers) if (!seen.has(id)){ m.remove(); markers.delete(id); }
 
   const showPings = !lobby && (me.role === "seeker" || me.st !== "active" || G.over), live = new Set();
   if (showPings) for (const pg of G.pings){ live.add(pg.id);
-    if (!pingMarkers.has(pg.id)) pingMarkers.set(pg.id, L.marker([pg.lat, pg.lng], {interactive:false, keyboard:false, icon:L.divIcon({className:"", iconSize:[0, 0], html:'<div class="ping"><b>' + esc(pg.name) + "</b></div>"})}).addTo(map)); }
+    if (!pingMarkers.has(pg.id)) pingMarkers.set(pg.id, L.marker([pg.lat, pg.lng], {interactive:false, keyboard:false, icon:L.divIcon({className:"", iconSize:[0, 0], html:'<div class="ping">' + (pg.name ? "<b>" + esc(pg.name) + "</b>" : "") + "</div>"})}).addTo(map)); }
   for (const [id, m] of pingMarkers) if (!live.has(id)){ m.remove(); pingMarkers.delete(id); }
+
+  const liveItems = new Set();
+  if (!lobby && cfg.items && !G.over) for (const it of cfg.items){ if (G.taken.has(it.id)) continue; liveItems.add(it.id);
+    if (!itemMarkers.has(it.id)) itemMarkers.set(it.id, L.marker([it.lat, it.lng], {interactive:false, keyboard:false, zIndexOffset:-500, icon:L.divIcon({className:"", iconSize:[0, 0], html:'<div class="item">' + ITEMS[it.type].icon + "</div>"})}).addTo(map)); }
+  for (const [id, m] of itemMarkers) if (!liveItems.has(id)){ m.remove(); itemMarkers.delete(id); }
 
   if (!lobby && follow && me.lat != null && me.st === "active") map.panTo([me.lat, me.lng], {animate:true, duration:.4});
 }
@@ -793,8 +920,49 @@ $("#shareBtn").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text + " " + url); $("#shareBtn").textContent = "Link copied"; } catch(e){ $("#shareBtn").textContent = code; }
   setTimeout(() => $("#shareBtn").textContent = "Share invite", 1800);
 });
-$("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= TAG_R && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
+$("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= tagR() && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
 $("#caughtBtn").addEventListener("click", () => gotCaught(null));
+let shRes = null;
+function sheet(title, choices, input){
+  return new Promise(res => { if (shRes) shRes(null); shRes = res; G.shChoices = choices || [];
+    $("#shTitle").textContent = title;
+    $("#shChoices").innerHTML = G.shChoices.map((c, i) => '<button class="ghost" type="button" data-i="' + i + '">' + esc(c) + "</button>").join("");
+    const inp = $("#shInput"); inp.hidden = !input; $("#shOk").hidden = !input;
+    if (input){ inp.value = input.value || ""; inp.placeholder = input.placeholder || ""; inp.maxLength = input.max || 16; inp.inputMode = input.numeric ? "numeric" : "text"; }
+    $("#sheet").hidden = false; if (input) inp.focus(); });
+}
+function closeSheet(v){ $("#sheet").hidden = true; const r = shRes; shRes = null; if (r) r(v); }
+$("#shChoices").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const c = G.shChoices[+b.dataset.i]; if ($("#shInput").hidden) closeSheet(c); else $("#shInput").value = c; });
+$("#shOk").addEventListener("click", () => closeSheet($("#shInput").value.trim()));
+$("#shInput").addEventListener("keydown", e => { if (e.key === "Enter") closeSheet($("#shInput").value.trim()); });
+$("#shCancel").addEventListener("click", () => closeSheet(null));
+function spend(k){ const j = me.inv.indexOf(k); if (j >= 0) me.inv.splice(j, 1); pubMe(); tick(); }
+const otherPlayers = () => [...players.values()].filter(p => p.id !== me.id);
+$("#inv").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b || !cfg || cfg.phase !== "live" || me.st !== "active") return;
+  const k = me.inv[+b.dataset.i], until = Date.now() + cfg.pdur*1000;
+  if (k === "jam"){ ev({t:"jam", until}); spend(k); toast("Seekers jammed for " + cfg.pdur + " s"); }
+  else if (k === "ghost"){ me.ghostUntil = until; spend(k); toast("Invisible for " + cfg.pdur + " s"); }
+  else if (k === "rat"){
+    const hs = otherPlayers().filter(p => p.role === "hider" && p.st === "active"); if (!hs.length) return toast("Nobody to rat out");
+    const c = await sheet("Rat out which hider?", hs.map(p => p.name)), target = hs.find(p => p.name === c);
+    if (target){ ev({t:"rat", id:target.id, until: Date.now() + cfg.pdur*1000}); spend(k); toast("You ratted out " + target.name); } }
+  else if (k === "swap"){
+    const c = await sheet("Whose name do you want to wear?", [...new Set(otherPlayers().map(p => p.name))]);
+    if (c){ me.alias = c; spend(k); toast("Seekers now see you as " + c); } }
+  else if (k === "decoy"){ G.armed = true; follow = false; toast("Tap the map where the fake ping goes"); }
+});
+async function placeDecoy(ll){
+  const names = [...new Set(otherPlayers().filter(p => p.role === "hider").map(p => p.name))];
+  const name = await sheet("Name on the fake ping", names, {value: names[Math.floor(Math.random()*names.length)] || "", placeholder:"Any name"});
+  if (name === null || !me.inv.includes("decoy")) return;
+  ev({t:"decoy", lat:ll.lat, lng:ll.lng, name:name.slice(0, 16), until: Date.now() + cfg.pdur*1000, id:"d" + Date.now()}); spend("decoy"); toast("Decoy placed");
+}
+$("#thawBtn").addEventListener("click", async () => {
+  const p = G.thawTarget; if (!p) return;
+  const c = await sheet("Type the code on " + p.name + "'s screen", null, {placeholder:"3-digit code", numeric:true, max:3});
+  if (c) ev({t:"thaw", to:p.id, code:c});
+});
 $("#turnBtn").addEventListener("click", () => { me.role = "seeker"; me.st = "active"; ev({t:"turned", id:me.id}); pubMe(); toast("You're a seeker now"); tick(); });
 $("#endBtn").addEventListener("click", () => { if (isHost() && cfg.phase === "live") hostSet({phase:"over", winner: calcWinner(1e9, 0), endedAt: Date.now()}, true); });
 $("#againBtn").addEventListener("click", () => { if (isHost()) hostSet({phase:"lobby", zones:null, t0:null, winner:null}, true); });
