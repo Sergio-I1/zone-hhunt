@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1E6A49">
+<title>Zone Hunt</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0EA; --surface:#FFFFFF; --surface-2:#F5F7F2; --ink:#18211C; --muted:#5D6A62; --line:#D2D9D1;
+  --accent:#1E6A49; --accent-ink:#FFFFFF;
+  --hider:#2563D6; --seeker:#DB4B22; --zone:#7B3FD0; --out:#8A938D;
+  --font-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#111613; --surface:#1A211C; --surface-2:#151B17; --ink:#E6ECE7; --muted:#93A199; --line:#2C3730;
+  --accent:#43B783; --accent-ink:#0D1A13;
+  --hider:#6A9BFF; --seeker:#FF7A4D; --zone:#B48CFF; --out:#6C7670; color-scheme:dark}
+  .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{height:100dvh;display:flex;flex-direction:column}
+
+.page{flex:1;overflow-y:auto;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.inner{max-width:640px;margin:0 auto;display:grid;gap:24px}
+.brand h1{font-family:var(--font-display);font-weight:900;font-size:clamp(56px,16vw,96px);line-height:.86;margin:0 0 8px;text-transform:uppercase}
+.brand h1 span{color:var(--zone)}
+.brand p{margin:0;color:var(--muted);max-width:46ch}
+.field{display:grid;gap:6px}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.text{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%;font-size:16px}
+.big{border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);padding:15px 20px;font-family:var(--font-display);font-weight:900;font-size:26px;letter-spacing:.06em;text-transform:uppercase;width:100%}
+.big[disabled]{opacity:.45;cursor:not-allowed}
+.joinrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.joinrow .text{font-family:var(--font-mono);font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 16px;font-weight:700;font-size:14px}
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.msg{margin:0;font-size:14px;color:var(--muted);min-height:1.4em}
+.msg.err{color:var(--seeker);font-weight:600}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
+.check input{margin-top:3px;accent-color:var(--accent)}
+
+.codebar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.codebar .code{font-family:var(--font-mono);font-weight:700;font-size:30px;letter-spacing:.14em;line-height:1}
+.codebar .sp{flex:1}
+.sec{display:grid;gap:12px}
+.sec h2{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec h2 small{font-family:var(--font-body);font-weight:500;font-size:13px;letter-spacing:0;text-transform:none;color:var(--muted)}
+.roster{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.prow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow.stale{opacity:.5}
+.pname{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname em{font-style:normal;font-weight:500;color:var(--muted);font-size:13px;margin-left:6px}
+.mark{width:16px;height:16px;flex:none;display:inline-block}
+.mark.hider{border-radius:50%;background:var(--hider)}
+.mark.seeker{background:var(--seeker);transform:rotate(45deg) scale(.82);border-radius:3px}
+.rolebtn{border:1.5px solid currentColor;background:transparent;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;white-space:nowrap}
+.rolebtn.hider{color:var(--hider)} .rolebtn.seeker{color:var(--seeker)}
+.rolebtn[disabled]{opacity:.75;cursor:default;border-style:dashed}
+.rowbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.teamcount{margin-left:auto;font-size:13px;color:var(--muted)}
+.mapslot.lob{height:280px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);position:relative}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.modes{grid-template-columns:1fr}}
+.mode{position:relative;display:grid;gap:4px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode strong{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
+.mode span{font-size:13.5px;color:var(--muted)}
+.mode:has(input:checked){border-color:var(--zone);box-shadow:0 0 0 3px color-mix(in srgb,var(--zone) 18%,transparent)}
+fieldset[disabled] .mode{cursor:default}
+fieldset[disabled] .mode:not(:has(input:checked)){opacity:.5}
+.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+@media (max-width:520px){.sliders{grid-template-columns:1fr}}
+.slider{display:grid;gap:4px}
+.slider .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.slider output{font-family:var(--font-mono);font-weight:700;font-size:14px}
+.slider small{color:var(--muted);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--zone)}
+.slider.off{opacity:.45}
+
+.game{flex:1;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0}
+.hud{background:var(--surface);border-bottom:1px solid var(--line);padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.clockbox{display:grid;line-height:1}
+.phase{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.clock{font-family:var(--font-mono);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums}
+.hudmid{display:grid;gap:2px;min-width:0;font-size:13px}
+.hudmid div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hudmid .z{color:var(--zone);font-weight:700}
+.hudmid .p{color:var(--muted)}
+.chip{display:inline-flex;padding:6px 12px;border-radius:999px;font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:.06em;text-transform:uppercase;line-height:1;color:#fff}
+.chip.hider{background:var(--hider)} .chip.seeker{background:var(--seeker)} .chip.out{background:var(--out)}
+.mapwrap{position:relative;min-height:0;overflow:hidden}
+.mapslot.full{position:absolute;inset:0}
+#map{width:100%;height:100%;background:var(--surface-2)}
+.over{position:absolute;z-index:1100}
+.alert{top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 120px);padding:8px 14px;border-radius:10px;font-weight:700;font-size:14px;color:#fff;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none}
+.alert.danger{background:var(--seeker)} .alert.spot{background:var(--hider)} .alert.zone{background:var(--zone)}
+.toast{left:50%;top:42%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;font-family:var(--font-display);font-weight:800;font-size:24px;text-transform:uppercase;text-align:center;max-width:min(86%,420px);box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:opacity .4s}
+.mapctl{right:max(10px,env(safe-area-inset-right));top:10px;display:grid;gap:6px}
+.mapctl button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:18px}
+.legend{left:max(10px,env(safe-area-inset-left));bottom:22px;display:flex;gap:10px;align-items:center;background:color-mix(in srgb,var(--surface) 90%,transparent);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend .mark{width:11px;height:11px}
+.legend .ring{width:12px;height:12px;border-radius:50%;border:2px dashed var(--zone)}
+.netbar{top:0;left:0;right:0;background:var(--seeker);color:#fff;text-align:center;font-weight:700;font-size:13px;padding:4px}
+.dock{background:var(--surface);border-top:1px solid var(--line);padding:10px max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:grid;gap:8px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.act{border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;color:#fff}
+.act.tag,.act.join{background:var(--seeker)} .act.caught{background:var(--hider)}
+.act.go{background:var(--accent);color:var(--accent-ink)}
+.act[disabled]{opacity:.4;cursor:not-allowed}
+.counts{font-size:13px;color:var(--muted);margin-left:auto}
+.counts b{color:var(--ink)}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)}
+.ctl .gps{font-family:var(--font-mono);margin-right:auto}
+.small{border:1px solid var(--line);background:transparent;border-radius:10px;padding:6px 12px;font-weight:600;font-size:13px}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:12.5px;color:var(--muted);min-height:3.2em}
+.log li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log time{font-family:var(--font-mono);font-size:11.5px;margin-right:8px;color:var(--ink);opacity:.7}
+.endwrap{inset:0;z-index:1200;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 55%,transparent);padding:16px}
+.endcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:380px;width:100%;display:grid;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.3)}
+.endcard h2{margin:0;font-family:var(--font-display);font-weight:900;font-size:46px;line-height:.9;text-transform:uppercase}
+.endcard h2.hiders{color:var(--hider)} .endcard h2.seekers{color:var(--seeker)}
+.endcard p{margin:0;color:var(--muted);font-size:14px}
+.endcard dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.endcard dt{color:var(--muted)} .endcard dd{margin:0;font-weight:600}
+.endbtns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* map markers */
+.pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
+.pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pm.hider i{border-radius:50%;background:var(--hider)}
+.pm.seeker i{background:var(--seeker);transform:rotate(45deg);border-radius:3px}
+.pm.gone i{background:var(--out)}
+.pm.stale{opacity:.5}
+.pm.you i{width:20px;height:20px;outline:3px solid var(--ink);outline-offset:2px}
+.pm b{position:absolute;bottom:calc(100% + 6px);white-space:nowrap;font:700 11px var(--font-body);color:#18211C;background:rgba(255,255,255,.9);padding:1px 6px;border-radius:6px}
+.ping{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;border:3px solid var(--hider);animation:pulse 1.4s ease-out infinite;pointer-events:none}
+.ping b{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);white-space:nowrap;font:700 11px var(--font-body);color:#fff;background:var(--hider);padding:1px 6px;border-radius:6px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--hider) 60%,transparent)}100%{box-shadow:0 0 0 18px transparent}}
+@media (prefers-reduced-motion: reduce){.ping{animation:none}.toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section class="page" id="home">
+    <div class="inner">
+      <header class="brand">
+        <h1>Zone <span>Hunt</span></h1>
+        <p>Real-life hide-and-seek on a live map. One person creates a game, everyone else joins with the code.</p>
+      </header>
+      <div class="field">
+        <label class="lbl" for="nameIn">Your name</label>
+        <input class="text" id="nameIn" maxlength="16" autocomplete="off" placeholder="What should friends see?">
+      </div>
+      <button class="big" id="createBtn" type="button">Create a game</button>
+      <div class="or">or join one</div>
+      <div class="joinrow">
+        <input class="text" id="codeIn" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code">
+        <button class="ghost" id="joinBtn" type="button">Join</button>
+      </div>
+      <p class="msg" id="homeMsg"></p>
+      <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section class="page" id="lobby" hidden>
+    <div class="inner">
+      <div class="codebar">
+        <div><div class="lbl">Game code</div><div class="code" id="codeOut"></div></div>
+        <span class="sp"></span>
+        <button class="ghost" id="shareBtn" type="button">Share invite</button>
+        <button class="ghost" id="leaveBtn" type="button">Leave</button>
+      </div>
+
+      <section class="sec">
+        <h2>Players <small id="rosterHint"></small></h2>
+        <div class="roster" id="roster"></div>
+        <div class="rowbtns">
+          <button class="ghost" id="shuffleBtn" type="button">Shuffle teams</button>
+          <span class="teamcount" id="teamCount"></span>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Play area <small id="areaHint"></small></h2>
+        <div class="mapslot lob" id="slotLobby"></div>
+        <div class="rowbtns"><button class="ghost" id="centerBtn" type="button">Center zone on me</button><span class="teamcount" id="gpsLobby"></span></div>
+      </section>
+
+      <fieldset id="settings">
+        <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div></section>
+        <section class="sec"><h2>Time limits</h2>
+          <div class="sliders">
+            <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait at base while hiders scatter.</small></div>
+            <div class="slider" id="pingWrap"><div class="top"><label class="lbl" for="sPing">Hider ping every</label><output id="oPing"></output></div><input type="range" id="sPing" min="1" max="5" step="1"><small>Every hider's spot flashes on the seekers' map.</small></div>
+          </div>
+        </section>
+        <section class="sec"><h2>The zone</h2>
+          <div class="sliders">
+            <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sEnd">Smallest zone</label><output id="oEnd"></output></div><input type="range" id="sEnd" min="15" max="100" step="5"><small>How tight it gets at the end.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"><small>Number of times the circle closes in.</small></div>
+          </div>
+        </section>
+      </fieldset>
+
+      <div class="field">
+        <button class="big" id="startBtn" type="button">Start game</button>
+        <p class="msg" id="startMsg"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section class="game" id="game" hidden>
+    <div class="hud">
+      <div class="clockbox"><span class="phase" id="hPhase">Hide</span><span class="clock" id="hClock">0:00</span></div>
+      <div class="hudmid"><div class="z" id="hZone"></div><div class="p" id="hPing"></div></div>
+      <span class="chip hider" id="hRole">Hider</span>
+    </div>
+    <div class="mapwrap">
+      <div class="mapslot full" id="slotGame"><div id="map"></div></div>
+      <div class="over netbar" id="netbar" hidden>Reconnecting…</div>
+      <div class="over alert" id="alert" hidden></div>
+      <div class="over toast" id="toast" hidden></div>
+      <div class="over mapctl">
+        <button type="button" id="meBtn" aria-label="Center on me" title="Center on me">◎</button>
+        <button type="button" id="fitBtn" aria-label="Show the whole zone" title="Show the whole zone">⤢</button>
+      </div>
+      <div class="over legend" aria-hidden="true">
+        <span><i class="mark hider"></i>Hider</span><span><i class="mark seeker"></i>Seeker</span><span><i class="ring"></i>Next zone</span>
+      </div>
+      <div class="over endwrap" id="endWrap" hidden>
+        <div class="endcard">
+          <h2 id="endTitle"></h2>
+          <p id="endSub"></p>
+          <dl id="endStats"></dl>
+          <div class="endbtns">
+            <button class="act go" type="button" id="againBtn">Back to lobby</button>
+            <button class="ghost" type="button" id="endLeaveBtn">Leave game</button>
+          </div>
+          <p id="endWait" hidden>Waiting for the host to set up the next round.</p>
+        </div>
+      </div>
+    </div>
+    <div class="dock">
+      <div class="actions">
+        <button class="act tag" type="button" id="tagBtn" hidden>Tag hider</button>
+        <button class="act caught" type="button" id="caughtBtn" hidden>I got caught</button>
+        <button class="act join" type="button" id="turnBtn" hidden>Turn into a seeker</button>
+        <span class="counts" id="counts"></span>
+      </div>
+      <ol class="log" id="log" aria-live="polite"></ol>
+      <div class="ctl">
+        <span class="gps" id="gpsOut">GPS …</span>
+        <button class="small" type="button" id="endBtn" hidden>End game</button>
+        <button class="small" type="button" id="quitBtn">Leave</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+(() => {
+"use strict";
+/* ============================================================
+   Zone Hunt: multiplayer hide-and-seek.
+   Phones talk through a free public message relay (MQTT). Every
+   message is encrypted with a key made from the game code, so only
+   people who have the code can read where players are.
+   ============================================================ */
+const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+const QS = new URLSearchParams(location.search);
+const BROKER_OVERRIDE = QS.get("broker");
+const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const TAG_R = 15, SIGHT = 30, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000;
+const MODES = {
+  classic:  {name:"Classic",            blurb:"Seekers hunt, caught hiders are out. Hiders' spots ping on the map every few minutes."},
+  infection:{name:"Infection",          blurb:"Every caught hider turns into a seeker. The hunt snowballs."},
+  manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
+  zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+const store = { get(k, s){ try { return JSON.parse((s||localStorage).getItem(k)); } catch(e){ return null; } },
+                set(k, v, s){ try { (s||localStorage).setItem(k, JSON.stringify(v)); } catch(e){} },
+                del(k, s){ try { (s||localStorage).removeItem(k); } catch(e){} } };
+
+/* ---------------- geo helpers ---------------- */
+const M_LAT = 111320;
+function dist(a, b){ if (a.lat == null || b.lat == null) return Infinity;
+  const dy = (a.lat - b.lat)*M_LAT, dx = (a.lng - b.lng)*M_LAT*Math.cos((a.lat + b.lat)/2*Math.PI/180); return Math.hypot(dx, dy); }
+function offset(c, dx, dy){ return {lat: c.lat + dy/M_LAT, lng: c.lng + dx/(M_LAT*Math.cos(c.lat*Math.PI/180))}; }
+function ring(c, n = 72){ const pts = []; for (let i = 0; i < n; i++){ const a = i/n*Math.PI*2, p = offset(c, Math.cos(a)*c.r, Math.sin(a)*c.r); pts.push([p.lat, p.lng]); } return pts; }
+const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+
+/* ---------------- me & shared state ---------------- */
+const saved = store.get("zh-session", sessionStorage) || {};
+const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
+             lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider" };
+let code = null, cfg = null, test = false;
+const players = new Map();              // id -> last presence (+ seen)
+const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
+            pings:[], log:[], liveSince:0 };
+const isHost = () => cfg && cfg.host === me.id;
+function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null}, sessionStorage); }
+
+/* ---------------- network ---------------- */
+const N = { client:null, key:null, base:null, onCfg:null };
+const codeIdx = c => [...c].reduce((a, ch) => a + ch.charCodeAt(0), 0) % BROKERS.length;
+function makeCode(idx){ for(;;){ let c = ""; for (const b of crypto.getRandomValues(new Uint8Array(6))) c += ALPHA[b % ALPHA.length]; if (BROKER_OVERRIDE || codeIdx(c) === idx) return c; } }
+async function derive(c){
+  const enc = new TextEncoder();
+  const km = await crypto.subtle.importKey("raw", enc.encode(c), "PBKDF2", false, ["deriveBits"]);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2", hash:"SHA-256", salt:enc.encode("zone-hunt-v1"), iterations:120000}, km, 384));
+  N.key = await crypto.subtle.importKey("raw", bits.slice(0, 32), "AES-GCM", false, ["encrypt", "decrypt"]);
+  N.base = "zonehunt/" + [...bits.slice(32)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function seal(obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv}, N.key, new TextEncoder().encode(JSON.stringify(obj))));
+  let s = ""; for (const b of iv) s += String.fromCharCode(b); for (const b of ct) s += String.fromCharCode(b); return btoa(s);
+}
+async function unseal(str){
+  const a = Uint8Array.from(atob(str), c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM", iv:a.slice(0, 12)}, N.key, a.slice(12))));
+}
+function connect(url){
+  return new Promise((res, rej) => {
+    let done = false;
+    const c = mqtt.connect(url, {clientId:"zh_" + me.id + "_" + Math.random().toString(36).slice(2, 6), clean:true, keepalive:30, reconnectPeriod:0, connectTimeout:8000});
+    const fail = e => { if (done) return; done = true; clearTimeout(to); try { c.end(true); } catch(_){} rej(e || new Error("connect failed")); };
+    const to = setTimeout(fail, 9000);
+    c.once("connect", () => { if (done) return; done = true; clearTimeout(to); c.options.reconnectPeriod = 2000; res(c); });
+    c.once("error", fail); c.once("close", () => fail());
+  });
+}
+function wire(c){
+  N.client = c;
+  c.subscribe(N.base + "/#");
+  c.on("message", async (topic, payload) => {
+    if (!payload || !payload.length) return;
+    let m; try { m = await unseal(new TextDecoder().decode(payload)); } catch(e){ return; }
+    if (N.client !== c) return;
+    if (m.t === "cfg") applyCfg(m); else if (m.t === "p") applyPresence(m); else onEvent(m);
+  });
+  c.on("connect", () => { $("#netbar").hidden = true; pubMe(); });
+  c.on("close", () => { if (N.client === c) $("#netbar").hidden = false; });
+  c.on("error", () => {});
+}
+async function pub(sub, obj, retain){ if (!N.client) return; const s = await seal(obj); try { N.client.publish(N.base + "/" + sub, s, {retain: !!retain, qos:0}); } catch(e){} }
+const ev = obj => pub("e", {...obj, from: me.id});
+let cfgTimer = 0;
+function pubCfg(now){ clearTimeout(cfgTimer); const go = () => { const m = {...cfg, t:"cfg"}; pub("c", m, false); pub("c", m, true); }; now ? go() : (cfgTimer = setTimeout(go, 120)); }
+function hostSet(patch, now){ const prev = cfg.phase; cfg = {...cfg, ...patch, rev: cfg.rev + 1}; pubCfg(now); if (cfg.phase !== prev) onPhase(prev); renderLobby(); }
+function closeNet(){ const c = N.client; N.client = null; if (c) try { c.end(true); } catch(e){} }
+
+let lastPub = 0;
+function pubMe(){
+  lastPub = Date.now();
+  const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub};
+  applyPresence(p); pub("p/" + me.id, p); save();
+}
+function applyPresence(p){
+  const old = players.get(p.id);
+  if (old && old.ts > p.ts) return;
+  players.set(p.id, {...p, seen: Date.now()});
+}
+function applyCfg(c){
+  if (cfg && c.rev <= cfg.rev) return;
+  const prev = cfg ? cfg.phase : null; cfg = c;
+  if (N.onCfg){ N.onCfg(); N.onCfg = null; }
+  if (cfg.phase !== prev) onPhase(prev);
+  renderLobby(true);
+}
+const nameOf = id => (players.get(id) || {}).name || "Someone";
+function onEvent(m){
+  switch (m.t){
+    case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
+    case "bye": if (m.from !== me.id) players.delete(m.from); break;
+    case "role": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.role = m.role; pubMe(); } break;
+    case "tag": if (m.to === me.id) gotCaught(m.from); break;
+    case "caught":
+      addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : " got caught"));
+      if (m.by === me.id){ me.tags++; pubMe(); toast("You got " + nameOf(m.id)); }
+      break;
+    case "zoneout": addLog(nameOf(m.id) + " was eliminated by the zone"); break;
+    case "turned": addLog(nameOf(m.id) + " turned into a seeker"); break;
+  }
+}
+
+/* ---------------- location ---------------- */
+let watchId = null, gpsErr = "";
+function startGPS(){
+  if (test){ const c = (cfg && cfg.center) || {lat:29.8884, lng:-97.9384}; const p = offset(c, (Math.random()-.5)*30, (Math.random()-.5)*30); me.lat = p.lat; me.lng = p.lng; me.acc = 3; return; }
+  if (watchId != null) return;
+  if (!navigator.geolocation){ gpsErr = "This browser has no location support."; return; }
+  watchId = navigator.geolocation.watchPosition(pos => {
+    gpsErr = ""; const moved = dist(me, {lat:pos.coords.latitude, lng:pos.coords.longitude});
+    me.lat = pos.coords.latitude; me.lng = pos.coords.longitude; me.acc = pos.coords.accuracy;
+    if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
+    if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
+  }, err => {
+    gpsErr = err.code === 1 ? "Location is blocked. Allow location for this site in your browser settings, then reload." : "Waiting for a GPS signal…";
+  }, {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
+}
+function stopGPS(){ if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; } }
+let wake = null;
+async function keepAwake(){ try { if (navigator.wakeLock && document.visibilityState === "visible") wake = await navigator.wakeLock.request("screen"); } catch(e){} }
+document.addEventListener("visibilitychange", () => { if (cfg && cfg.phase === "live") keepAwake(); });
+
+/* ---------------- create / join / leave ---------------- */
+function homeMsg(t, err){ const m = $("#homeMsg"); m.textContent = t; m.className = "msg" + (err ? " err" : ""); }
+function busy(b){ $("#createBtn").disabled = b; $("#joinBtn").disabled = b; }
+function readHome(){
+  me.name = $("#nameIn").value.trim().slice(0, 16);
+  if (!me.name){ homeMsg("Type your name first.", true); $("#nameIn").focus(); return false; }
+  store.set("zh-name", me.name); test = $("#testChk").checked;
+  if (!window.mqtt || !window.L){ homeMsg("Couldn't load the app. Check your internet connection and reload.", true); return false; }
+  if (!crypto.subtle){ homeMsg("This page needs a secure (https) address to work.", true); return false; }
+  return true;
+}
+async function createGame(){
+  if (!readHome()) return; busy(true); homeMsg("Creating your game…");
+  let c = null, idx = 0;
+  const urls = BROKER_OVERRIDE ? [BROKER_OVERRIDE] : BROKERS;
+  for (idx = 0; idx < urls.length; idx++){ try { c = await connect(urls[idx]); break; } catch(e){} }
+  if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
+  code = makeCode(idx); await derive(code);
+  cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null};
+  me.role = "hider"; me.st = "active";
+  wire(c); startGPS();
+  if (test) cfg.center = {lat:29.8884, lng:-97.9384};
+  pubCfg(true); pubMe(); busy(false); homeMsg(""); onPhase(null);
+}
+async function joinGame(c0, rejoin){
+  if (!rejoin && !readHome()) return;
+  const cd = (c0 || $("#codeIn").value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (cd.length !== 6) return homeMsg("Game codes are 6 characters.", true);
+  busy(true); homeMsg("Joining " + cd + "…");
+  let c; try { c = await connect(BROKER_OVERRIDE || BROKERS[codeIdx(cd)]); }
+  catch(e){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
+  code = cd; cfg = null; await derive(code);
+  const got = new Promise(res => { N.onCfg = () => res(true); setTimeout(() => res(false), 6000); });
+  wire(c); ev({t:"hello"});
+  if (!(await got)){ closeNet(); code = null; busy(false); store.del("zh-session", sessionStorage); return homeMsg("No game found with code " + cd + ". Check the code with your host.", true); }
+  startGPS(); pubMe(); busy(false); homeMsg("");
+}
+function leave(){
+  ev({t:"bye"}); setTimeout(closeNet, 150); stopGPS();
+  code = null; cfg = null; players.clear(); me.lat = me.lng = null; me.st = "active"; me.role = "hider";
+  store.del("zh-session", sessionStorage); store.set("zh-session", {id:me.id}, sessionStorage);
+  try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+  show("home");
+}
+
+/* ---------------- screens ---------------- */
+let map = null, follow = true, userMoved = false;
+function show(which){
+  for (const id of ["home", "lobby", "game"]) $("#" + id).hidden = id !== which;
+  if (which === "home") return;
+  if (!map) initMap();
+  $(which === "lobby" ? "#slotLobby" : "#slotGame").appendChild($("#map"));
+  setTimeout(() => { map.invalidateSize(); fitZone(); }, 60);
+}
+function onPhase(prev){
+  const s = store.get("zh-session", sessionStorage) || {};
+  if (cfg.phase === "lobby"){
+    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; pubMe(); }
+    else if (prev === null && s.code === code && s.role){ me.role = s.role; }
+    $("#endWrap").hidden = true; userMoved = false; show("lobby"); renderLobby(true);
+  } else {
+    if (prev !== "live" && prev !== "over"){
+      if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; }
+      else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; }
+      else { me.st = "caught"; me.lobbyRole = me.role; }           // walked into a game already running: spectate
+      me.outSince = null; G.pings = []; G.log = []; G.lastPingIdx = null; G.announced = 0; G.winner = null;
+      G.liveSince = Date.now(); G.wasHunt = Date.now() >= cfg.t0 + cfg.head*1000;
+      follow = true; show("game"); keepAwake(); pubMe(); renderLog();
+      if (prev === "lobby"){ addLog("Game on: " + MODES[cfg.mode].name + ". Hiders have " + fmt(cfg.head) + " to hide."); toast(me.role === "hider" ? "Go hide!" : "You're a seeker. Wait at base"); }
+    }
+    if (cfg.phase === "over") showEnd(cfg.winner);
+  }
+  save(); tick();
+}
+
+/* ---------------- lobby ---------------- */
+const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
+            ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"]];
+function buildLobbyControls(){
+  const box = $("#modes");
+  for (const [k, m] of Object.entries(MODES)){
+    const l = document.createElement("label"); l.className = "mode";
+    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.querySelector("input").addEventListener("change", () => isHost() && hostSet({mode:k}));
+    box.append(l);
+  }
+  for (const [sid, , key] of SL) $("#" + sid).addEventListener("input", e => {
+    if (!isHost()) return; const patch = {[key]: +e.target.value};
+    if (key === "endR" && patch.endR >= cfg.startR) patch.endR = Math.max(15, cfg.startR - 25);
+    if (key === "startR" && cfg.endR >= patch.startR) patch.endR = Math.max(15, patch.startR - 25);
+    hostSet(patch);
+  });
+}
+let rosterSig = "";
+function renderLobby(force){
+  if (!cfg || cfg.phase !== "lobby") return;
+  const host = isHost(), now = Date.now();
+  $("#codeOut").textContent = code;
+  $("#settings").disabled = !host;
+  for (const [sid, oid, key, f] of SL){ const el = $("#" + sid); if (document.activeElement !== el || !host) el.value = cfg[key]; $("#" + oid).textContent = f(cfg[key]); }
+  const r = $("#mode-" + cfg.mode); if (r) r.checked = true;
+  const noPing = cfg.mode === "manhunt"; $("#pingWrap").classList.toggle("off", noPing); $("#sPing").disabled = noPing;
+  $("#shuffleBtn").hidden = !host; $("#centerBtn").hidden = !host;
+  $("#rosterHint").textContent = host ? "tap a role to switch it" : "tap your role to switch it";
+  $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
+  $("#gpsLobby").textContent = gpsErr || (me.acc != null ? "Your GPS: ±" + Math.round(me.acc) + " m" : "Finding your location…");
+
+  const list = [...players.values()].sort((a, b) => (a.id === cfg.host ? -1 : b.id === cfg.host ? 1 : a.name.localeCompare(b.name) || a.id.localeCompare(b.id)));
+  const sig = list.map(p => [p.id, p.name, p.role, now - p.seen > STALE].join("|")).join(",") + host;
+  if (sig !== rosterSig || force){
+    rosterSig = sig; const box = $("#roster"); box.innerHTML = "";
+    for (const p of list){
+      const stale = now - p.seen > STALE, mine = p.id === me.id;
+      const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
+      const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
+      row.innerHTML = '<i class="mark ' + p.role + '"></i><div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      const b = document.createElement("button"); b.type = "button"; b.className = "rolebtn " + p.role; b.textContent = p.role === "hider" ? "Hider" : "Seeker";
+      b.disabled = !(mine || host);
+      b.addEventListener("click", () => {
+        const role = p.role === "hider" ? "seeker" : "hider";
+        if (mine){ me.role = role; pubMe(); } else { p.role = role; ev({t:"role", id:p.id, role}); }
+        renderLobby(true);
+      });
+      row.append(b); box.append(row);
+    }
+  }
+  const fresh = list.filter(p => now - p.seen <= STALE), h = fresh.filter(p => p.role === "hider").length, s = fresh.length - h;
+  $("#teamCount").textContent = h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
+  const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
+  let why = "";
+  if (!cfg.center) why = "Waiting for your GPS so the zone can be placed.";
+  else if (fresh.length < 2) why = "Share the code so at least one more player can join.";
+  else if (!h || !s) why = "You need at least one hider and one seeker.";
+  sb.disabled = !!why;
+  sm.className = "msg" + (host && why ? " err" : "");
+  sm.textContent = host ? (why || "Everyone should be at the center pin when you start.") : "Waiting for the host to start the game.";
+}
+function startGame(){
+  if (!isHost() || !cfg.center) return;
+  const s = cfg.shrinks, zones = [{...cfg.center, r:cfg.startR}];
+  for (let k = 1; k <= s; k++){
+    const prev = zones[k-1], r = Math.round(cfg.startR - (cfg.startR - cfg.endR)*k/s);
+    const a = Math.random()*Math.PI*2, d = Math.sqrt(Math.random())*(prev.r - r)*0.9;
+    zones.push({...offset(prev, Math.cos(a)*d, Math.sin(a)*d), r});
+  }
+  hostSet({phase:"live", zones, t0: Date.now() + 4000, winner:null, endedAt:null}, true);
+}
+
+/* ---------------- zone timeline ---------------- */
+function sched(k){ const iv = cfg.minutes*60/(cfg.shrinks + 1), z = cfg.mode === "zone"; return {start: cfg.head + iv*k - (z ? iv*0.85 : 0), dur: z ? iv*0.85 : Math.min(120, iv*0.45)}; }
+function zoneAt(t){
+  const zs = cfg.zones; let z = zs[0];
+  for (let k = 1; k < zs.length; k++){
+    const {start, dur} = sched(k);
+    if (t < start) return {cur:z, next:zs[k], k, shrinking:false, nextAt:start};
+    if (t < start + dur){ const e = ease((t - start)/dur), a = zs[k-1], b = zs[k];
+      return {cur:{lat:a.lat+(b.lat-a.lat)*e, lng:a.lng+(b.lng-a.lng)*e, r:a.r+(b.r-a.r)*e}, next:b, k, shrinking:true, nextAt:start+dur}; }
+    z = zs[k];
+  }
+  return {cur:z, next:null, final:true};
+}
+
+/* ---------------- game rules ---------------- */
+function canSee(p){
+  if (p.id === me.id || G.over || me.st !== "active" || p.st !== "active" || p.role === me.role) return true;
+  if (!G.hunt) return p.role === "seeker";
+  if (cfg.mode === "manhunt") return true;
+  const d = dist(me, p);
+  if (p.role === "seeker") return d <= ALERT;
+  return d <= SIGHT || dist(p, G.zi.cur) > G.zi.cur.r;
+}
+function nearestOf(role){ let best = null, bd = Infinity; const now = Date.now();
+  for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
+  return best ? {p:best, d:bd} : null; }
+function gotCaught(by){
+  if (!cfg || cfg.phase !== "live" || me.role !== "hider" || me.st !== "active" || !G.hunt) return;
+  const inf = cfg.mode === "infection";
+  if (inf){ me.role = "seeker"; toast("You've been turned into a seeker"); } else { me.st = "caught"; toast("You got caught"); }
+  me.outSince = null; ev({t:"caught", id:me.id, by: by || null, inf}); pubMe();
+}
+function calcWinner(t, end){
+  const now = Date.now(); let free = 0;
+  for (const p of players.values()) if (p.role === "hider" && p.st === "active" && now - p.seen < 120000) free++;
+  if (t >= end) return free ? "hiders" : "seekers";
+  if (t >= cfg.head + 5 && now - G.liveSince > 8000 && free === 0) return "seekers";
+  return null;
+}
+function addLog(text){ G.log.unshift({t: Math.max(0, G.t), text}); G.log.length = Math.min(G.log.length, 30); renderLog(); }
+function renderLog(){ $("#log").innerHTML = G.log.slice(0, 3).map(e => "<li><time>" + fmt(e.t) + "</time>" + esc(e.text) + "</li>").join(""); }
+let toastT = 0;
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; el.style.opacity = 1; clearTimeout(toastT);
+  toastT = setTimeout(() => { el.style.opacity = 0; toastT = setTimeout(() => el.hidden = true, 450); }, 2400); }
+
+function showEnd(w){
+  if (G.over && G.winner === w) return;
+  G.over = true; G.winner = w;
+  const free = [...players.values()].filter(p => p.role === "hider" && p.st === "active");
+  const top = [...players.values()].filter(p => p.tags > 0).sort((a, b) => b.tags - a.tags)[0];
+  const tl = $("#endTitle"); tl.textContent = w === "hiders" ? "Hiders win" : "Seekers win"; tl.className = w;
+  const endT = ((cfg.endedAt || Date.now()) - cfg.t0)/1000;
+  $("#endSub").textContent = w === "hiders" ? (free.length ? free.map(p => p.name).join(", ") + " stayed free." : "The hiders held out.") : "Every hider was found.";
+  const rows = [["Mode", MODES[cfg.mode].name], ["Hunt time", fmt(Math.max(0, Math.min(endT, cfg.head + cfg.minutes*60) - cfg.head))],
+                ["Top tagger", top ? top.name + " (" + top.tags + ")" : "Nobody"],
+                ["You", me.st === "active" ? (me.role === "hider" ? "Survived" : "Seeker to the end") : me.st === "caught" ? "Caught" : "Eliminated"]];
+  $("#endStats").innerHTML = rows.map(r => "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
+  $("#againBtn").hidden = !isHost(); $("#endWait").hidden = isHost();
+  $("#endWrap").hidden = false;
+}
+
+/* ---------------- main tick ---------------- */
+function tick(){
+  if (!cfg || !N.client) return;
+  const now = Date.now();
+  if (now - lastPub > 4000) pubMe();
+  for (const [id, p] of players) if (id !== me.id && now - p.seen > (cfg.phase === "lobby" ? 45000 : 900000)) players.delete(id);
+  if (cfg.phase === "lobby"){ G.over = false; renderLobby(); renderMap(); return; }
+
+  const t = G.t = (now - cfg.t0)/1000, end = cfg.head + cfg.minutes*60;
+  G.hunt = t >= cfg.head; G.zi = zoneAt(t);
+  if (cfg.phase === "live"){
+    G.over = false;
+    if (G.hunt && !G.wasHunt){ addLog("Seekers released!"); toast("Seekers released"); }
+    G.wasHunt = G.hunt;
+    if (G.zi.shrinking && G.zi.k !== G.announced){ if (G.announced !== 0 || t - sched(G.zi.k).start < 5){ addLog("The zone is closing in."); toast("Zone closing"); } G.announced = G.zi.k; }
+    if (cfg.mode !== "manhunt" && G.hunt){
+      const idx = Math.floor((t - cfg.head)/(cfg.ping*60));
+      if (G.lastPingIdx == null) G.lastPingIdx = idx;
+      else if (idx > G.lastPingIdx){
+        G.lastPingIdx = idx;
+        for (const p of players.values()) if (p.role === "hider" && p.st === "active" && p.lat != null && p.id !== me.id) G.pings.push({lat:p.lat, lng:p.lng, name:p.name, at:now, id:p.id + idx});
+        addLog("Ping! Every hider's spot just flashed on the seekers' map.");
+        toast(me.role === "hider" && me.st === "active" ? "Ping! Seekers saw your spot" : "Ping! Hiders revealed");
+      }
+    }
+    if (me.st === "active" && me.lat != null){
+      if (dist(me, G.zi.cur) > G.zi.cur.r){
+        if (!me.outSince) me.outSince = now;
+        if (cfg.mode === "zone" && me.role === "hider" && G.hunt && now - me.outSince > OUT_GRACE*1000 && (me.acc || 0) < 50){
+          me.st = "out"; me.outSince = null; toast("The zone got you"); ev({t:"zoneout", id:me.id}); pubMe(); }
+      } else me.outSince = null;
+    }
+    const w = calcWinner(t, end);
+    if (w){ if (isHost()) hostSet({phase:"over", winner:w, endedAt:now}, true); else showEnd(w); }
+    else if (G.over || !$("#endWrap").hidden){ G.over = false; G.winner = null; $("#endWrap").hidden = true; }
+  }
+  G.pings = G.pings.filter(p => now - p.at < PING_SHOW*1000);
+  hud(t, end); renderMap();
+}
+function hud(t, end){
+  const zi = G.zi, over = cfg.phase === "over" || G.over, pre = t < 0;
+  $("#hPhase").textContent = over ? "Final" : pre ? "Get ready" : G.hunt ? "Hunt" : "Hide · seekers wait";
+  $("#hClock").textContent = fmt(over ? 0 : pre ? -t : G.hunt ? end - t : cfg.head - t);
+  $("#hZone").textContent = zi.final ? "Final zone · " + Math.round(zi.cur.r) + " m" : zi.shrinking ? "Zone closing · " + fmt(zi.nextAt - t) : "Zone shrinks in " + fmt(zi.nextAt - t);
+  const nextPing = cfg.head + (Math.max(0, Math.floor((t - cfg.head)/(cfg.ping*60))) + 1)*cfg.ping*60;
+  $("#hPing").textContent = cfg.mode === "manhunt" ? "Manhunt: everyone is visible" : (me.role === "hider" && me.st === "active" ? "Your spot pings in " : "Next hider ping in ") + fmt(nextPing - t);
+  const chip = $("#hRole"), gone = me.st !== "active";
+  chip.className = "chip " + (gone ? "out" : me.role);
+  chip.textContent = gone ? (me.st === "caught" ? "Caught" : "Out") : me.role === "hider" ? "Hider" : "Seeker";
+
+  let free = 0, seekers = 0;
+  for (const p of players.values()){ if (p.role === "hider" && p.st === "active") free++; if (p.role === "seeker" && p.st === "active") seekers++; }
+  $("#counts").innerHTML = "<b>" + free + "</b> hider" + (free === 1 ? "" : "s") + " free · <b>" + seekers + "</b> seeker" + (seekers === 1 ? "" : "s");
+
+  let txt = "", kind = "";
+  if (!over && me.st === "active" && !pre){
+    if (me.outSince && G.hunt){ kind = "zone";
+      txt = me.role === "seeker" ? "Outside the zone · get back in" : cfg.mode === "zone" ? "Outside the zone · out in " + fmt(OUT_GRACE - (Date.now() - me.outSince)/1000) : "Outside the zone · seekers can see you"; }
+    else if (me.role === "hider" && G.hunt){ const n = nearestOf("seeker"); if (n && n.d <= ALERT){ kind = "danger"; txt = "Seeker nearby · " + Math.round(n.d) + " m"; } }
+    else if (me.role === "seeker"){
+      if (!G.hunt){ kind = "zone"; txt = "Stay at base · released in " + fmt(cfg.head - t); }
+      else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= SIGHT*1.6){ kind = "spot"; txt = n.d <= TAG_R ? "In reach · tag " + n.p.name + "!" : "Hider spotted · " + Math.round(n.d) + " m"; } }
+    }
+  }
+  const al = $("#alert"); al.hidden = !txt; al.textContent = txt; al.className = "over alert " + kind;
+
+  const reach = nearestOf("hider"), tb = $("#tagBtn");
+  tb.hidden = !(me.role === "seeker" && me.st === "active") || over;
+  tb.disabled = !G.hunt || !(reach && reach.d <= TAG_R);
+  tb.textContent = reach && reach.d <= TAG_R && G.hunt ? "Tag " + reach.p.name : "Tag hider";
+  $("#caughtBtn").hidden = !(me.role === "hider" && me.st === "active" && G.hunt) || over;
+  $("#turnBtn").hidden = !(me.st !== "active" && cfg.mode !== "infection") || over;
+  $("#endBtn").hidden = !isHost() || cfg.phase !== "live";
+  $("#gpsOut").textContent = test ? "Test mode · tap map to move" : gpsErr || (me.acc != null ? "GPS ±" + Math.round(me.acc) + " m" : "GPS …");
+}
+
+/* ---------------- map ---------------- */
+let Lz, Ln, Ls, shadeKey = "", fitKey = "";
+const markers = new Map(), pingMarkers = new Map();
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function initMap(){
+  map = L.map("map", {zoomControl:false}).setView([29.8884, -97.9384], 16);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+  const zc = css("--zone");
+  Ls = L.polygon([], {stroke:false, fillColor:"#2a1648", fillOpacity:.38, interactive:false}).addTo(map);
+  Lz = L.circle([0, 0], {radius:1, color:zc, weight:3, fill:false, interactive:false});
+  Ln = L.circle([0, 0], {radius:1, color:zc, weight:2, dashArray:"8 7", fill:false, interactive:false});
+  map.on("dragstart", () => { follow = false; userMoved = true; });
+  map.on("click", e => {
+    if (!cfg) return;
+    if (cfg.phase === "lobby" && isHost()) return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}});
+    if (test){ me.lat = e.latlng.lat; me.lng = e.latlng.lng; pubMe(); tick(); }
+  });
+}
+function curZones(){
+  if (cfg.phase === "lobby") return cfg.center ? {cur:{...cfg.center, r:cfg.startR}, next:{...cfg.center, r:cfg.endR}} : {};
+  return G.zi ? {cur:G.zi.cur, next:G.zi.next} : {};
+}
+function fitZone(){ const z = cfg && (cfg.phase === "lobby" ? curZones().cur : cfg.zones && cfg.zones[0]); if (map && z) map.fitBounds(L.latLng(z.lat, z.lng).toBounds(z.r*2.25)); }
+function setCircle(layer, z){ if (!z){ layer.remove(); return; } layer.setLatLng([z.lat, z.lng]); layer.setRadius(z.r); if (!map.hasLayer(layer)) layer.addTo(map); }
+function renderMap(){
+  if (!map || !cfg) return;
+  const {cur, next} = curZones();
+  setCircle(Lz, cur); setCircle(Ln, next);
+  const key = cur ? [cur.lat.toFixed(6), cur.lng.toFixed(6), cur.r.toFixed(1)].join() : "";
+  if (key !== shadeKey){ shadeKey = key;
+    Ls.setLatLngs(cur ? [[[cur.lat-.6, cur.lng-.6], [cur.lat-.6, cur.lng+.6], [cur.lat+.6, cur.lng+.6], [cur.lat+.6, cur.lng-.6]], ring(cur)] : []); }
+  if (cfg.phase === "lobby"){ const fk = key; if (fk !== fitKey && !userMoved){ fitKey = fk; fitZone(); } }
+
+  const now = Date.now(), lobby = cfg.phase === "lobby", seen = new Set();
+  for (const p of players.values()){
+    if (p.lat == null || !(lobby || canSee(p))) continue;
+    seen.add(p.id);
+    const sig = [p.role, p.st, p.name, now - p.seen > STALE].join("|");
+    let m = markers.get(p.id);
+    if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
+    if (m._sig !== sig){ m._sig = sig;
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + p.role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(p.name)) + "</b><i></i></div>"})); }
+    m.setLatLng([p.lat, p.lng]);
+  }
+  for (const [id, m] of markers) if (!seen.has(id)){ m.remove(); markers.delete(id); }
+
+  const showPings = !lobby && (me.role === "seeker" || me.st !== "active" || G.over), live = new Set();
+  if (showPings) for (const pg of G.pings){ live.add(pg.id);
+    if (!pingMarkers.has(pg.id)) pingMarkers.set(pg.id, L.marker([pg.lat, pg.lng], {interactive:false, keyboard:false, icon:L.divIcon({className:"", iconSize:[0, 0], html:'<div class="ping"><b>' + esc(pg.name) + "</b></div>"})}).addTo(map)); }
+  for (const [id, m] of pingMarkers) if (!live.has(id)){ m.remove(); pingMarkers.delete(id); }
+
+  if (!lobby && follow && me.lat != null && me.st === "active") map.panTo([me.lat, me.lng], {animate:true, duration:.4});
+}
+
+/* ---------------- buttons ---------------- */
+$("#createBtn").addEventListener("click", createGame);
+$("#joinBtn").addEventListener("click", () => joinGame());
+$("#codeIn").addEventListener("keydown", e => { if (e.key === "Enter") joinGame(); });
+$("#leaveBtn").addEventListener("click", leave);
+$("#quitBtn").addEventListener("click", leave);
+$("#endLeaveBtn").addEventListener("click", leave);
+$("#startBtn").addEventListener("click", startGame);
+$("#shuffleBtn").addEventListener("click", () => {
+  const list = [...players.values()].filter(p => Date.now() - p.seen <= STALE).sort(() => Math.random() - .5);
+  const nSeek = Math.max(1, Math.round(list.length/3));
+  list.forEach((p, i) => { const role = i < nSeek ? "seeker" : "hider"; if (p.id === me.id){ me.role = role; pubMe(); } else { p.role = role; ev({t:"role", id:p.id, role}); } });
+  renderLobby(true);
+});
+$("#centerBtn").addEventListener("click", () => { if (me.lat != null){ userMoved = false; hostSet({center:{lat:me.lat, lng:me.lng}}); } });
+$("#shareBtn").addEventListener("click", async () => {
+  const url = location.origin + location.pathname + location.search + "#" + code, text = "Join my Zone Hunt game! Code: " + code;
+  try { if (navigator.share) return await navigator.share({title:"Zone Hunt", text, url}); } catch(e){ return; }
+  try { await navigator.clipboard.writeText(text + " " + url); $("#shareBtn").textContent = "Link copied"; } catch(e){ $("#shareBtn").textContent = code; }
+  setTimeout(() => $("#shareBtn").textContent = "Share invite", 1800);
+});
+$("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= TAG_R && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
+$("#caughtBtn").addEventListener("click", () => gotCaught(null));
+$("#turnBtn").addEventListener("click", () => { me.role = "seeker"; me.st = "active"; ev({t:"turned", id:me.id}); pubMe(); toast("You're a seeker now"); tick(); });
+$("#endBtn").addEventListener("click", () => { if (isHost() && cfg.phase === "live") hostSet({phase:"over", winner: calcWinner(1e9, 0), endedAt: Date.now()}, true); });
+$("#againBtn").addEventListener("click", () => { if (isHost()) hostSet({phase:"lobby", zones:null, t0:null, winner:null}, true); });
+$("#meBtn").addEventListener("click", () => { follow = true; if (me.lat != null) map.setView([me.lat, me.lng], Math.max(map.getZoom(), 17)); });
+$("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
+
+/* ---------------- boot ---------------- */
+buildLobbyControls();
+$("#nameIn").value = store.get("zh-name") || "";
+const hashCode = location.hash.replace("#", "").toUpperCase();
+if (/^[A-Z0-9]{6}$/.test(hashCode)) $("#codeIn").value = hashCode;
+if (QS.has("test")) $("#testChk").checked = true;
+setInterval(tick, 500);
+if (saved.code && $("#nameIn").value){ me.name = $("#nameIn").value; test = !!saved.test; $("#testChk").checked = test; joinGame(saved.code, true); }
+})();
+</script>
+</body>
+</html>
