@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1E6A49">
 <title>Zone Hunt</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
@@ -970,6 +973,7 @@ $("#meBtn").addEventListener("click", () => { follow = true; if (me.lat != null)
 $("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
 
 /* ---------------- boot ---------------- */
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 buildLobbyControls();
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
