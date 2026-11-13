@@ -390,7 +390,8 @@ const MODES = {
   infection:{name:"Infection",          blurb:"Every caught hider turns into a seeker. The hunt snowballs."},
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
   zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."},
-  freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen."}
+  freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen.",
+             how:"To unfreeze someone, you must be close enough (inside the tag range), read the code off their phone, and type it on your own phone."}
 };
 const ITEMS = {
   life:  {icon:"❤️", name:"Extra life", desc:"Adds a life the moment you pick it up."},
@@ -781,7 +782,7 @@ function drawDemo(){
   requestAnimationFrame(drawDemo);
   if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
   const k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((performance.now() - demoT0)/9000) % 1, d = DEMOS[k](u);
-  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker."; }
+  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker." + (MODES[k].how ? " " + MODES[k].how : ""); }
   const x = $("#demo").getContext("2d"), ink = css("--ink"), cH = css("--hider"), cS = css("--seeker"), cZ = css("--zone"), cO = css("--out");
   x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = css("--surface-2"); x.fillRect(0, 0, 300, 160);
   x.beginPath(); x.rect(0, 0, 300, 160); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2, true); x.fillStyle = "rgba(60,30,110,.3)"; x.fill("evenodd");
@@ -1102,7 +1103,7 @@ async function placeDecoy(ll){
 }
 $("#thawBtn").addEventListener("click", async () => {
   const p = G.thawTarget; if (!p) return;
-  const c = await sheet("Type the code on " + p.name + "'s screen", null, {placeholder:"3-digit code", numeric:true, max:3});
+  const c = await sheet("You're close enough. Type the code shown on " + p.name + "'s phone", null, {placeholder:"3-digit code", numeric:true, max:3});
   if (c) ev({t:"thaw", to:p.id, code:c});
 });
 $("#turnBtn").addEventListener("click", () => { me.role = "seeker"; me.st = "active"; ev({t:"turned", id:me.id}); pubMe(); toast("You're a seeker now"); tick(); });
