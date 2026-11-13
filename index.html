@@ -226,6 +226,26 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .cm i{font-style:normal;width:20px;height:20px;border-radius:50%;background:#18211C;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:11px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .cm.found i{background:var(--zone)}
 .cm b{position:absolute;top:calc(100% + 3px);white-space:nowrap;font:700 10.5px var(--font-body);color:#fff;background:#18211C;padding:1px 6px;border-radius:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.mhearts s{text-decoration:none;opacity:.25}
+.mtoast{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);white-space:nowrap;background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:8px;font-weight:800;text-transform:uppercase;padding:4px 7px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+.mjam{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;background:repeating-linear-gradient(45deg,#18211c,#18211c 5px,#232e27 5px,#232e27 10px)}
+.mbtn.dim{opacity:.4}
+.mbank i.used{box-shadow:0 0 0 2px var(--zone)}
+.pugrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.pugrid .demo{position:sticky;top:8px}
+@media (max-width:560px){.pugrid{grid-template-columns:1fr}.pugrid .demo{order:-1}}
+.pulist li.purow{cursor:pointer;display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:10px;padding:6px;font-size:13.5px;color:var(--muted)}
+.pulist li.purow[aria-pressed="true"]{border-color:var(--zone);background:var(--surface-2)}
+.avarow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.avaprev{width:44px;height:44px;border-radius:50%;border:3px solid var(--hider);background:var(--hider) center/cover;flex:none}
+.pava{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none;display:block}
+.pm.pic i{width:32px;height:32px;border-radius:50%;border:3px solid var(--hider);background-size:cover;background-position:center;transform:none}
+.pm.pic.seeker i{border-color:var(--seeker);border-radius:9px;transform:none}
+.pm.pic.gone i{border-color:var(--out);filter:grayscale(1)}
+.pm.pic.you i{width:36px;height:36px}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -272,7 +292,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
           <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
           <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
-          <li>Power-up list with icons under Advanced settings.</li>
+          <li>Photo icons: take a picture in the lobby and it replaces your dot on the map.</li>
+          <li>Tap a power-up under Advanced settings to watch an example of it.</li>
+          <li>Phone screen examples for tagging, getting tagged and using a power-up.</li>
           <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
         </ul>
       </details>
@@ -293,6 +315,13 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <section class="sec">
         <h2>Players <small id="rosterHint"></small></h2>
         <div class="roster" id="roster"></div>
+        <div class="avarow">
+          <span class="avaprev" id="avaPrev" aria-hidden="true"></span>
+          <button class="ghost" type="button" id="avaBtn">Take a photo for my icon</button>
+          <button class="ghost" type="button" id="avaClear" hidden>Use the plain peg</button>
+          <input type="file" id="avaIn" accept="image/*" capture="user" hidden>
+        </div>
+        <p class="msg" id="avaMsg">Optional. Your photo replaces your dot on the map. Only people in this game see it.</p>
         <label class="check"><input type="checkbox" id="cRand"> <span><b>Secret random roles.</b> Nobody picks. When the game starts, each phone goes dark and then reveals if you're a hider or a seeker.</span></label>
         <div class="slider" id="seekWrap" hidden><div class="top"><label class="lbl" for="sSeek">Seekers</label><output id="oSeek"></output></div><input type="range" id="sSeek" min="1" max="5" step="1"><small>How many players get picked as seekers.</small></div>
         <div class="rowbtns">
@@ -310,12 +339,14 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
           <p class="msg" id="demoHint"></p>
+          <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
+            <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button><button type="button" data-t="pow" aria-pressed="false">Using a power-up</button></div>
           <div class="previews">
             <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
             <figure class="mock" aria-label="Example of the hider's screen">
               <div class="mscreen">
                 <div class="mhud"><span><small>Hunt</small>12:40</span><em class="hider">Hider</em></div>
-                <div class="mmap"><i class="mzone"></i><i class="mdot hider you" style="left:44%;top:56%"></i><i class="mdot seeker" style="left:66%;top:34%"></i><b class="malert danger">Seeker nearby · 42 m</b></div>
+                <div class="mmap"><i class="mzone"></i><i class="mdot hider you" style="left:44%;top:56%"></i><i class="mdot seeker" style="left:66%;top:34%"></i><b class="malert danger" id="mhAlert">Seeker nearby · 12 m</b><b class="mtoast" id="mhToast" hidden></b></div>
                 <div class="mdock"><div class="mrow"><span class="mhearts" id="mockHearts">♥♥</span><span class="mbank" id="mockBank"><i>📡</i><i>👻</i></span></div><div class="mbtn hider">I got caught</div></div>
               </div>
               <figcaption>Hider's screen: lives bottom left, power-ups bottom right</figcaption>
@@ -323,8 +354,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <figure class="mock" aria-label="Example of the seeker's screen">
               <div class="mscreen">
                 <div class="mhud"><span><small>Hunt</small>12:40</span><em class="seeker">Seeker</em></div>
-                <div class="mmap"><i class="mzone"></i><i class="mdot seeker you" style="left:48%;top:52%"></i><i class="mdot hider" style="left:60%;top:40%"></i><b class="malert spot">In reach · tag John!</b></div>
-                <div class="mdock"><div class="mrow"><span class="mcount">2 hiders free</span></div><div class="mbtn seeker">Tag John</div></div>
+                <div class="mmap"><i class="mzone"></i><i class="mdot seeker you" style="left:48%;top:52%"></i><i class="mdot hider" style="left:60%;top:40%"></i><b class="malert spot" id="msAlert">In reach · tag John!</b><b class="mjam" id="msJam" hidden></b></div>
+                <div class="mdock"><div class="mrow"><span class="mcount">2 hiders free</span></div><div class="mbtn seeker" id="msBtn">Tag John</div></div>
               </div>
               <figcaption>Seeker's screen: Tag lights up when a hider is in range</figcaption>
             </figure>
@@ -364,7 +395,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               </div>
               <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups.</b> Off means a hider can hold only one at a time.</span></label>
               <h3>What each power-up does</h3>
-              <ul class="pulist" id="puList"></ul>
+              <p class="msg" id="puHint"></p>
+              <div class="pugrid">
+                <ul class="pulist" id="puList"></ul>
+                <div class="demo"><canvas id="puDemo" width="600" height="320" role="img" aria-label="Animated example of the selected power-up"></canvas></div>
+              </div>
             </section>
             <section class="sec"><h3>Results</h3>
               <label class="check"><input type="checkbox" id="cReplay"> <span><b>Movement time-lapse.</b> Records where everyone went, so you can replay the whole game on the map afterwards.</span></label>
@@ -473,7 +508,7 @@ const MODES = {
   zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."},
   freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen.",
              how:"To unfreeze someone, you must be close enough (inside the tag range), read the code off their phone, and type it on your own phone."},
-  sardines: {name:"Sardines",           blurb:"One hider, everyone else seeks. Find the hider and you hide with them. The last seeker left looking loses.",
+  sardines: {name:"Sardines",           blurb:"One hider, everyone else seeks. Find the hider and you hide with them. The hiding spot still pings on the map. The last seeker left looking loses.",
              how:"When you find the hider, tap \"I found them\" and you become a hider too. Seekers can't see each other on the map, so nobody can follow you there."}
 };
 const ITEMS = {
@@ -504,7 +539,7 @@ const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
 const saved = store.get("zh-session", sessionStorage) || {};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
              lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
-             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false };
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"" };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
@@ -570,7 +605,7 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, away:me.away, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
+             lives:me.lives, away:me.away, av:me.av, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
@@ -578,6 +613,10 @@ function applyPresence(p){
   if (old && old.ts > p.ts) return;
   if (old && p.id !== me.id && !!old.away !== !!p.away && cfg && cfg.phase === "live") addLog(p.away ? p.name + "'s phone went to sleep" : p.name + " is back");
   players.set(p.id, {...p, seen: Date.now()});
+  if (p.id !== me.id){
+    if (!p.av){ avatars.delete(p.id); avaKey.delete(p.id); }
+    else if (avaKey.get(p.id) !== p.av && Date.now() - (avaAsked.get(p.id) || 0) > 5000){ avaAsked.set(p.id, Date.now()); ev({t:"needava", id:p.id}); }
+  }
   if (p.took) for (const i of p.took) if (!G.taken.has(i)) G.taken.set(i, p.id);
 }
 function applyCfg(c){
@@ -591,6 +630,8 @@ function applyCfg(c){
 const nameOf = id => (players.get(id) || {}).name || "Someone";
 function onEvent(m){
   switch (m.t){
+    case "needava": if (m.id === me.id) sendAva(); break;
+    case "ava": if (m.from === m.id && m.id !== me.id && okImg(m.img)){ avatars.set(m.id, m.img); avaKey.set(m.id, String(m.av || "")); renderLobby(true); } break;
     case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
     case "bye": if (m.from !== me.id) players.delete(m.from); break;
     case "role": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.role = m.role; pubMe(); } break;
@@ -777,7 +818,7 @@ function renderLobby(force){
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
   $("#powAdv").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
-  $("#mockHearts").textContent = "♥".repeat(cfg.lives); $("#mockBank").hidden = !cfg.powerups;
+  setMock();
   const rnd = !!cfg.randomRoles;
   $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
   $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd || cfg.mode === "sardines";
@@ -786,14 +827,14 @@ function renderLobby(force){
   $("#gpsLobby").textContent = gpsErr || (me.acc != null ? "Your GPS: ±" + Math.round(me.acc) + " m" : "Finding your location…");
 
   const list = [...players.values()].sort((a, b) => (a.id === cfg.host ? -1 : b.id === cfg.host ? 1 : a.name.localeCompare(b.name) || a.id.localeCompare(b.id)));
-  const sig = list.map(p => [p.id, p.name, p.role, now - p.seen > STALE].join("|")).join(",") + host + rnd;
+  const sig = list.map(p => [p.id, p.name, p.role, now - p.seen > STALE, avaKey.get(p.id) || ""].join("|")).join(",") + host + rnd;
   if (sig !== rosterSig || force){
     rosterSig = sig; const box = $("#roster"); box.innerHTML = "";
     for (const p of list){
       const stale = now - p.seen > STALE, mine = p.id === me.id;
       const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
       const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
-      row.innerHTML = '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i><div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      row.innerHTML = (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '<div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
       if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       const b = document.createElement("button"); b.type = "button"; b.className = "rolebtn " + p.role; b.textContent = p.role === "hider" ? "Hider" : "Seeker";
       b.disabled = !(mine || host);
@@ -861,37 +902,109 @@ const DEMOS = {                              // each returns {z:[x,y,r], note, p
   zone: u => { const z = demoZone(u), gone = u >= ZOUT + .2;
     return {z, note: u < .08 ? "The zone starts wide" : u < ZOUT ? "It never stops closing" : !gone ? "Joe is outside: " + Math.max(1, Math.ceil((ZOUT + .2 - u)/.2*3)) + " s left" : "Joe is eliminated",
       ents:[["John","h",[[0,92,48],[.78,160,76]]], ["Jacob","h",[[0,208,60],[.78,184,92]]], ["Joe", gone ? "x" : "h", [[0,118,126]]], ["Sam","s",[[0,150,80],[.5,176,96],[1,168,78]]]]}; },
-  sardines: u => ({z:[150, 80, 70],
-    note: u < .3 ? "John hides. Everyone else seeks" : u < .6 ? "Jacob found John and hides with him" : u < .9 ? "Joe squeezed in too" : "Sam is the last one looking",
-    ents:[["John","h",[[0,100,58]]], ["Jacob", u < .3 ? "s" : "h", [[0,190,60],[.3,110,64]]], ["Joe", u < .6 ? "s" : "h", [[0,165,125],[.35,200,95],[.6,94,70]]], ["Sam","s",[[0,150,80],[.4,205,110],[.8,150,125],[1,122,96]]]]}),
+  sardines: u => ({z:[150, 80, 70], ping: u >= .1 && u < .26 ? (u - .1)/.16 : -1,
+    note: u < .1 ? "John hides. Everyone else seeks" : u < .3 ? "Ping! John's spot flashes on the map" : u < .6 ? "Jacob found John and hides with him" : u < .9 ? "Joe squeezed in too" : "Sam is the last one looking",
+    ents:[["John","h",[[0,100,58]]], ["Jacob", u < .3 ? "s" : "h", [[0,190,60],[.3,110,64]], {np:true}], ["Joe", u < .6 ? "s" : "h", [[0,165,125],[.35,200,95],[.6,94,70]], {np:true}], ["Sam","s",[[0,150,80],[.4,205,110],[.8,150,125],[1,122,96]]]]}),
   freeze: u => ({z:[150, 80, 70],
     note: u < .25 ? "Sam chases John" : u < .45 ? "John is frozen. His phone shows a code: 482" : u < .68 ? "Jacob runs over to help" : "Jacob typed 482 on his phone. John is free",
     ents:[["John", u >= .25 && u < .68 ? "f" : "h", [[0,100,60],[.68,100,60],[1,78,98]]], ["Jacob","h",[[0,205,55],[.42,205,55],[.68,114,64],[1,150,42]]],
           ["Joe","h",[[0,168,124],[.45,168,124],[1,124,134]]], ["Sam","s",[[0,150,80],[.25,104,63],[.5,186,112],[1,140,128]]]]})
 };
 const stillDemo = matchMedia("(prefers-reduced-motion: reduce)").matches;
-function drawDemo(){
-  requestAnimationFrame(drawDemo);
-  if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
-  const k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((performance.now() - demoT0)/9000) % 1, d = DEMOS[k](u);
-  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker." + (MODES[k].how ? " " + MODES[k].how : ""); }
-  const x = $("#demo").getContext("2d"), ink = css("--ink"), cH = css("--hider"), cS = css("--seeker"), cZ = css("--zone"), cO = css("--out");
+const PUDEMOS = {                            // one tiny scene per power-up
+  life: u => ({z:[150, 80, 70], items: u < .62 ? [["❤️", 215, 110]] : [],
+    note: u < .25 ? "John has 2 lives. Sam is close" : u < .62 ? "Tagged! 1 life left. John runs for the heart" : "Extra life: back to 2 lives",
+    ents:[["John","h",[[0,110,60],[.25,110,60],[.62,215,110],[1,228,122]],{sub: u < .25 || u >= .62 ? "♥♥" : "♥"}], ["Sam","s",[[0,175,95],[.25,117,65],[.5,117,65],[1,185,100]]]]}),
+  jam: u => ({z:[150, 80, 70], jam: u >= .3 && u < .75,
+    note: u < .3 ? "Seeker's map: Sam is closing in on John" : u < .75 ? "John uses the Jammer. Sam's map goes dark" : "The map comes back. John is gone",
+    ents:[["John", u < .75 ? "h" : "n", [[0,120,70],[.3,128,74],[.75,215,122]]], ["Sam","s",[[0,195,112],[.3,142,83],[.75,136,80],[1,150,92]]]]}),
+  ghost: u => { const on = u >= .25 && u < .85;
+    return {z:[150, 80, 70], ping: u >= .45 && u < .65 ? (u - .45)/.2 : -1,
+      note: u < .25 ? "A ping is about to hit the hiders" : u < .45 ? "John uses Ghost and vanishes" : u < .65 ? "Ping! It shows Jacob and Joe, not John" : on ? "John stays invisible to seekers" : "Ghost wears off",
+      ents:[["John", on ? "g" : "h", [[0,105,58]], {np:true, label: on ? "John 👻" : "John"}], ["Jacob","h",[[0,198,62]]], ["Joe","h",[[0,160,122]]], ["Sam","s",[[0,150,80],[1,150,92]]]]}; },
+  rat: u => { const jp = along([[0,198,62],[.3,198,62],[.8,215,105]], u), on = u >= .3 && u < .8;
+    return {z:[150, 80, 70], rings: on ? [[jp[0], jp[1], (u*6) % 1]] : [],
+      note: u < .3 ? "John uses the Rat and picks Jacob" : on ? "Seekers see Jacob live. Sam goes after him" : "Time's up. Jacob is hidden again",
+      ents:[["John","h",[[0,105,58]],{label:"John 🐀"}], ["Jacob","h",jp,{label: on ? "Jacob (exposed)" : "Jacob"}], ["Sam","s",[[0,150,85],[.3,150,85],[.8,196,92]]]]}; },
+  decoy: u => ({z:[150, 80, 70], rings: u >= .3 && u < .8 ? [[212, 112, (u*5) % 1, "Joe"]] : [],
+    note: u < .3 ? "John drops a Decoy on the far side" : u < .8 ? "Sam sees a ping for Joe and goes to check" : "Nobody is there. John is still hidden",
+    ents:[["John","h",[[0,95,58]],{label:"John 📍"}], ["Sam","s",[[0,140,80],[.3,140,80],[.8,206,108]]]]}),
+  swap: u => ({z:[150, 80, 70], ping: u >= .4 && u < .7 ? ((u - .4)/.3*2) % 1 : -1,
+    note: u < .25 ? "John puts on Jacob's name" : u < .4 ? "Now seekers see him as Jacob" : u < .7 ? "Ping! Sam's map shows two Jacobs" : "Sam can't tell who is who",
+    ents:[["John","h",[[0,105,58]],{label: u < .25 ? "John 🎭" : "Jacob"}], ["Jacob","h",[[0,198,62]]], ["Sam","s",[[0,150,95]]]]})
+};
+let puSel = "life", puT0 = performance.now();
+function drawScene(cv, d, u){
+  const x = cv.getContext("2d"), ink = css("--ink"), cH = css("--hider"), cS = css("--seeker"), cZ = css("--zone"), cO = css("--out");
+  const ringAt = (rx, ry, ph, nm) => { x.beginPath(); x.arc(rx, ry, 7 + ph*14, 0, Math.PI*2); x.strokeStyle = cH; x.globalAlpha = 1 - ph*.8; x.lineWidth = 2; x.stroke(); x.globalAlpha = 1;
+    if (nm){ x.font = "700 9px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = cH; x.fillText(nm, rx, ry - 12); x.beginPath(); x.arc(rx, ry, 2.5, 0, Math.PI*2); x.fill(); } };
   x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = css("--surface-2"); x.fillRect(0, 0, 300, 160);
   x.beginPath(); x.rect(0, 0, 300, 160); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2, true); x.fillStyle = "rgba(60,30,110,.3)"; x.fill("evenodd");
   x.beginPath(); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2); x.strokeStyle = cZ; x.lineWidth = 2; x.stroke();
-  for (const [name, kind, pos] of d.ents){
+  for (const [icon, ix, iy] of d.items || []){ x.beginPath(); x.arc(ix, iy, 9, 0, Math.PI*2); x.fillStyle = "#fff"; x.fill(); x.strokeStyle = cZ; x.lineWidth = 1.5; x.stroke();
+    x.font = "10px sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText(icon, ix, iy + 3.5); }
+  for (const r of d.rings || []) ringAt(r[0], r[1], r[2], r[3]);
+  for (const [name, kind, pos, o = {}] of d.ents){
     if (kind === "n") continue;
     const [px, py] = Array.isArray(pos[0]) ? along(pos, u) : pos;
-    if (d.ping >= 0 && kind === "h"){ x.beginPath(); x.arc(px, py, 7 + d.ping*14, 0, Math.PI*2); x.strokeStyle = cH; x.globalAlpha = 1 - d.ping*.8; x.lineWidth = 2; x.stroke(); x.globalAlpha = 1; }
+    if (d.ping >= 0 && kind === "h" && !o.np) ringAt(px, py, d.ping);
+    if (kind === "g") x.globalAlpha = .3;
     x.fillStyle = kind === "s" ? cS : kind === "x" ? cO : kind === "f" ? "#9CC9F5" : cH; x.strokeStyle = "#fff"; x.lineWidth = 1.5;
     x.beginPath(); if (kind === "s"){ x.moveTo(px, py - 7); x.lineTo(px + 7, py); x.lineTo(px, py + 7); x.lineTo(px - 7, py); x.closePath(); } else x.arc(px, py, 5.5, 0, Math.PI*2);
     x.fill(); x.stroke();
     if (kind === "x"){ x.beginPath(); x.moveTo(px - 3, py - 3); x.lineTo(px + 3, py + 3); x.moveTo(px + 3, py - 3); x.lineTo(px - 3, py + 3); x.stroke(); }
-    x.font = "700 9px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText(name + (kind === "f" ? " ❄" : ""), px, py - 10);
+    x.globalAlpha = 1;
+    x.font = "700 9px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText((o.label || name) + (kind === "f" ? " ❄" : ""), px, py - 10);
+    if (o.sub){ x.fillStyle = cS; x.font = "11px sans-serif"; x.fillText(o.sub, px, py + 18); }
   }
+  if (d.jam){ x.fillStyle = "rgba(24,33,28,.94)"; x.fillRect(0, 0, 300, 160); x.strokeStyle = "rgba(255,255,255,.07)"; x.lineWidth = 6;
+    for (let i = -160; i < 300; i += 18){ x.beginPath(); x.moveTo(i, 160); x.lineTo(i + 160, 0); x.stroke(); }
+    x.fillStyle = "#fff"; x.font = "800 15px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillText("SIGNAL JAMMED", 150, 88); }
   x.font = "700 11px Figtree, system-ui, sans-serif"; x.textAlign = "left";
   const nw = x.measureText(d.note).width; x.fillStyle = css("--surface"); x.globalAlpha = .9; x.beginPath(); x.roundRect(5, 5, nw + 12, 17, 6); x.fill(); x.globalAlpha = 1;
   x.fillStyle = ink; x.fillText(d.note, 11, 17.5);
+}
+function drawDemo(){
+  requestAnimationFrame(drawDemo);
+  if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
+  const now = performance.now(), k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((now - demoT0)/9000) % 1;
+  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker." + (MODES[k].how ? " " + MODES[k].how : ""); }
+  drawScene($("#demo"), DEMOS[k](u), u);
+  const pc = $("#puDemo"); if (pc.offsetParent !== null){ const u2 = stillDemo ? .5 : ((now - puT0)/8000) % 1; drawScene(pc, PUDEMOS[puSel](u2), u2); }
+}
+
+/* ---------------- phone screen examples ---------------- */
+let mockTab = "tag";
+function setMock(tab){
+  if (tab) mockTab = tab; const t = mockTab, L = cfg ? cfg.lives : 2, one = L < 2;
+  for (const b of document.querySelectorAll("#mockTabs button")) b.setAttribute("aria-pressed", String(b.dataset.t === t));
+  const hearts = (n, lost) => "♥".repeat(n) + (lost ? "<s>" + "♥".repeat(lost) + "</s>" : "");
+  const hA = $("#mhAlert"), sA = $("#msAlert"), sB = $("#msBtn"), hT = $("#mhToast"), jam = $("#msJam"), bank = $("#mockBank");
+  hT.hidden = true; jam.hidden = true; sB.classList.remove("dim"); hA.hidden = false; sA.hidden = false; sA.className = "malert spot"; hA.className = "malert danger";
+  bank.hidden = !(cfg && cfg.powerups) && t !== "pow"; bank.firstElementChild.classList.toggle("used", t === "pow");
+  if (t === "tag"){ $("#mockHearts").innerHTML = hearts(L); hA.textContent = "Seeker nearby · 12 m"; sA.textContent = "In reach · tag John!"; sB.textContent = "Tag John"; }
+  else if (t === "hit"){ $("#mockHearts").innerHTML = hearts(L - 1, 1);
+    hA.textContent = one ? "You got caught" : "Tagged! Get away · safe 0:24"; hT.hidden = false; hT.textContent = one ? "You got caught" : "Tagged! " + (cfg ? cfg.grace : 30) + " s to get away";
+    sA.textContent = one ? "You got John" : "Hider spotted · 9 m"; sB.textContent = one ? "Tag hider" : "John is safe 0:24"; sB.classList.add("dim"); }
+  else { $("#mockHearts").innerHTML = hearts(L); hA.hidden = true; hT.hidden = false; hT.textContent = "Seekers jammed for " + (cfg ? cfg.pdur : 30) + " s";
+    sA.hidden = true; jam.hidden = false; jam.textContent = "Signal jammed · 0:27"; sB.textContent = "Tag hider"; sB.classList.add("dim"); }
+}
+
+/* ---------------- photo icons ---------------- */
+const avatars = new Map(), avaKey = new Map(), avaAsked = new Map(); let avaSent = 0;
+const okImg = v => typeof v === "string" && v.length < 16000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(v);
+function setMyAva(img){
+  me.ava = okImg(img) ? img : ""; me.av = me.ava ? Date.now().toString(36) : "";
+  if (me.ava){ avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } else { avatars.delete(me.id); avaKey.delete(me.id); }
+  store.set("zh-ava", me.ava); showMyAva(); if (N.client){ pubMe(); sendAva(); renderLobby(true); }
+}
+function showMyAva(){ const pv = $("#avaPrev"); pv.style.backgroundImage = me.ava ? "url(" + me.ava + ")" : ""; $("#avaClear").hidden = !me.ava; $("#avaBtn").textContent = me.ava ? "Retake photo" : "Take a photo for my icon"; }
+function sendAva(){ if (me.ava && Date.now() - avaSent > 1500){ avaSent = Date.now(); ev({t:"ava", id:me.id, av:me.av, img:me.ava}); } }
+function shrinkPhoto(file){
+  return new Promise((res, rej) => { const im = new Image(), url = URL.createObjectURL(file);
+    im.onload = () => { const c = document.createElement("canvas"); c.width = c.height = 72; const side = Math.min(im.width, im.height);
+      c.getContext("2d").drawImage(im, (im.width - side)/2, (im.height - side)/2, side, side, 0, 0, 72, 72); URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", .6)); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error("bad image")); }; im.src = url; });
 }
 
 /* ---------------- zone timeline ---------------- */
@@ -1165,11 +1278,11 @@ function renderMap(){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     const rp = G.replay ? trackAt(p.id, G.replay.t) : null; if (G.replay && !rp) continue;
     seen.add(p.id);
-    const idle = !!p.away || now - p.seen > STALE, role = lobby && cfg.randomRoles ? "hider" : p.role, sig = [role, p.st, dn(p), idle].join("|");
+    const idle = !!p.away || now - p.seen > STALE, role = lobby && cfg.randomRoles ? "hider" : p.role, pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, avaKey.get(p.id) || ""].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (idle ? " 💤" : "")) + "</b><i></i></div>"})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (pic ? " pic" : "") + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (idle ? " 💤" : "")) + "</b><i" + (pic ? ' style="background-image:url(' + pic + ')"' : "") + "></i></div>"})); }
     m.setLatLng(rp || [p.lat, p.lng]);
   }
   const liveC = new Set();                   // where people were caught or found the spot: shown once the game is over
@@ -1273,7 +1386,18 @@ $("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
 /* ---------------- boot ---------------- */
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 buildLobbyControls();
-$("#puList").innerHTML = Object.values(ITEMS).map(it => "<li><i>" + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + "</span></li>").join("");
+$("#puList").innerHTML = Object.entries(ITEMS).map(([k, it]) => '<li class="purow" role="button" tabindex="0" data-k="' + k + '" aria-pressed="' + (k === puSel) + '"><i>' + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + "</span></li>").join("");
+const pickPu = e => { const b = e.target.closest(".purow"); if (!b || b.dataset.k === puSel) return; puSel = b.dataset.k; puT0 = performance.now();
+  for (const r of document.querySelectorAll(".purow")) r.setAttribute("aria-pressed", String(r === b)); };
+$("#puList").addEventListener("click", pickPu); $("#puList").addEventListener("pointerover", pickPu);
+$("#puList").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pickPu(e); } });   // rows are not real buttons so players who aren't the host can use them too
+$("#puHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a power-up to see it in action.";
+$("#mockTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMock(b.dataset.t); });
+$("#avaBtn").addEventListener("click", () => $("#avaIn").click());
+$("#avaClear").addEventListener("click", () => setMyAva(""));
+$("#avaIn").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { setMyAva(await shrinkPhoto(f)); } catch(err){ $("#avaMsg").textContent = "That photo didn't work. Try another one."; } });
+{ const sv = store.get("zh-ava"); if (okImg(sv)){ me.ava = sv; me.av = "s" + sv.length.toString(36) + sv.slice(-6).replace(/[^A-Za-z0-9]/g, ""); avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } showMyAva(); }
 requestAnimationFrame(drawDemo);
 $("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " each game mode to see how it works.";
 $("#nameIn").value = store.get("zh-name") || "";
