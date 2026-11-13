@@ -181,6 +181,32 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .pulist li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;font-size:13.5px;color:var(--muted)}
 .pulist i{font-style:normal;width:34px;height:34px;border-radius:50%;border:2px solid var(--zone);background:#fff;display:grid;place-items:center;font-size:17px}
 .pulist b{color:var(--ink)}
+.previews{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+.previews .demo{align-self:center}
+@media (max-width:560px){.previews{grid-template-columns:repeat(2,minmax(0,1fr))}.previews .demo{grid-column:1 / -1}}
+.mock{margin:0;display:grid;gap:6px}
+.mock figcaption{font-size:11.5px;color:var(--muted);line-height:1.3}
+.mscreen{border:2px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--surface);display:grid;grid-template-rows:auto 1fr auto;aspect-ratio:9/16;font-size:9px;line-height:1.1}
+.mhud{display:flex;justify-content:space-between;align-items:center;gap:4px;padding:5px 6px;border-bottom:1px solid var(--line)}
+.mhud span{font-family:var(--font-mono);font-weight:700;font-size:11px;display:grid}
+.mhud small{font-family:var(--font-body);font-size:6.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.mhud em{font-style:normal;font-family:var(--font-display);font-weight:800;font-size:10px;text-transform:uppercase;color:#fff;padding:2px 6px;border-radius:99px}
+.mhud em.hider,.mbtn.hider{background:var(--hider)} .mhud em.seeker,.mbtn.seeker{background:var(--seeker)}
+.mmap{position:relative;background:color-mix(in srgb,var(--zone) 22%,var(--surface-2));overflow:hidden}
+.mzone{position:absolute;left:50%;top:50%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--surface-2);border:2px solid var(--zone)}
+.mdot{position:absolute;width:9px;height:9px;border:1.5px solid #fff;transform:translate(-50%,-50%)}
+.mdot.hider{border-radius:50%;background:var(--hider)} .mdot.seeker{background:var(--seeker);transform:translate(-50%,-50%) rotate(45deg);border-radius:2px}
+.mdot.you{outline:1.5px solid var(--ink);outline-offset:1.5px}
+.malert{position:absolute;top:5px;left:50%;transform:translateX(-50%);white-space:nowrap;color:#fff;font-size:7.5px;padding:3px 6px;border-radius:5px}
+.malert.danger{background:var(--seeker)} .malert.spot{background:var(--hider)}
+.mdock{padding:6px;border-top:1px solid var(--line);display:grid;gap:5px}
+.mrow{display:flex;justify-content:space-between;align-items:center;min-height:16px}
+.mhearts{color:var(--seeker);font-size:13px;letter-spacing:1px}
+.mbank{display:flex;gap:3px}
+.mbank i{font-style:normal;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--zone);background:#fff;display:grid;place-items:center;font-size:8.5px}
+.mcount{color:var(--muted);font-size:8px}
+.mbtn{color:#fff;font-weight:800;font-size:9px;text-align:center;padding:6px 4px;border-radius:7px}
+.status #inv{margin-left:auto;justify-content:flex-end}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -224,7 +250,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Stacking switch: let hiders hold several power-ups, or only one at a time.</li>
           <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
           <li>Caught hiders drop any power-ups they were holding.</li>
-          <li>Animated example of each game mode in the lobby.</li>
+          <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
           <li>Power-up list with icons under Advanced settings.</li>
           <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
         </ul>
@@ -262,7 +288,26 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
-          <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas><p id="demoCap"></p></div></section>
+          <div class="previews">
+            <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
+            <figure class="mock" aria-label="Example of the hider's screen">
+              <div class="mscreen">
+                <div class="mhud"><span><small>Hunt</small>12:40</span><em class="hider">Hider</em></div>
+                <div class="mmap"><i class="mzone"></i><i class="mdot hider you" style="left:44%;top:56%"></i><i class="mdot seeker" style="left:66%;top:34%"></i><b class="malert danger">Seeker nearby · 42 m</b></div>
+                <div class="mdock"><div class="mrow"><span class="mhearts" id="mockHearts">♥♥</span><span class="mbank" id="mockBank"><i>📡</i><i>👻</i></span></div><div class="mbtn hider">I got caught</div></div>
+              </div>
+              <figcaption>Hider's screen: lives bottom left, power-ups bottom right</figcaption>
+            </figure>
+            <figure class="mock" aria-label="Example of the seeker's screen">
+              <div class="mscreen">
+                <div class="mhud"><span><small>Hunt</small>12:40</span><em class="seeker">Seeker</em></div>
+                <div class="mmap"><i class="mzone"></i><i class="mdot seeker you" style="left:48%;top:52%"></i><i class="mdot hider" style="left:60%;top:40%"></i><b class="malert spot">In reach · tag John!</b></div>
+                <div class="mdock"><div class="mrow"><span class="mcount">2 hiders free</span></div><div class="mbtn seeker">Tag John</div></div>
+              </div>
+              <figcaption>Seeker's screen: Tag lights up when a hider is in range</figcaption>
+            </figure>
+          </div>
+          <p class="msg" id="demoCap"></p></section>
         <section class="sec"><h2>Game settings</h2>
           <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
@@ -691,6 +736,7 @@ function renderLobby(force){
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
   $("#powAdv").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
+  $("#mockHearts").textContent = "♥".repeat(cfg.lives); $("#mockBank").hidden = !cfg.powerups;
   const rnd = !!cfg.randomRoles;
   $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
   $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd;
