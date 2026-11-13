@@ -757,10 +757,11 @@ let demoMode = null, demoT0 = performance.now(), demoCapKey = "";
 const along = (pts, u) => { let a = pts[0]; for (const b of pts){ if (u <= b[0]){ const f = b[0] === a[0] ? 0 : (u - a[0])/(b[0] - a[0]); return [a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f]; } a = b; } return [a[1], a[2]]; };
 const demoZone = u => { const e = ease(Math.min(1, Math.max(0, (u - .08)/.7))); return [150 + 22*e, 80 + 4*e, 70 - 44*e]; };
 let ZOUT = 1; for (let i = 0; i <= 200; i++){ const z = demoZone(i/200); if (Math.hypot(118 - z[0], 126 - z[1]) > z[2]){ ZOUT = i/200; break; } }
-const DEMOS = {                              // each returns {z:[x,y,r], note, ping, ents:[[name, kind, position]]}; kind: h hider, s seeker, x out, f frozen
-  classic: u => ({z:[150, 80, 70], ping: u >= .3 && u < .5 ? (u - .3)/.2 : -1,
-    note: u < .3 ? "Seekers can't see the hiders" : u < .5 ? "Ping! Hiders flash on the map" : u < .72 ? "Sam closes in" : "John is caught and out",
-    ents:[["John", u < .72 ? "h" : "x", [[0,105,55]]], ["Jacob","h",[[0,198,62]]], ["Joe","h",[[0,160,122]]], ["Sam","s",[[0,150,80],[.3,150,96],[.5,150,96],[.72,110,59]]]]}),
+const DEMOS = {                              // each returns {z:[x,y,r], note, ping, ents:[[name, kind, position]]}; kind: h hider, s seeker, x out, f frozen, n not shown
+  classic: u => { const shown = u >= .3 && u < .55 ? "h" : "n";      // drawn the way the seeker's map looks: hiders only appear on a ping or up close
+    return {z:[150, 80, 70], ping: u >= .3 && u < .5 ? (u - .3)/.2 : -1,
+      note: u < .3 ? "Seeker's map: the hiders are hidden" : u < .55 ? "Ping! Their spots flash on the map" : u < .64 ? "Sam heads for John's ping" : u < .74 ? "Up close, Sam can see John" : "John is caught and out",
+      ents:[["John", u >= .74 ? "x" : u >= .64 ? "h" : shown, [[0,105,55]]], ["Jacob", shown, [[0,198,62]]], ["Joe", shown, [[0,160,122]]], ["Sam","s",[[0,150,80],[.3,150,96],[.5,150,96],[.74,110,59]]]]}; },
   infection: u => ({z:[150, 80, 70],
     note: u < .3 ? "Sam hunts alone" : u < .6 ? "John is infected: 2 seekers" : u < .92 ? "Jacob too: 3 seekers" : "Everyone is a seeker",
     ents:[["John", u < .3 ? "h" : "s", [[0,100,60],[.3,100,60],[.6,205,92],[.92,120,116]]], ["Jacob", u < .6 ? "h" : "s", [[0,200,55],[.35,200,55],[.6,214,98],[.92,128,108]]],
@@ -771,7 +772,7 @@ const DEMOS = {                              // each returns {z:[x,y,r], note, p
     return {z, note: u < .08 ? "The zone starts wide" : u < ZOUT ? "It never stops closing" : !gone ? "Joe is outside: " + Math.max(1, Math.ceil((ZOUT + .2 - u)/.2*3)) + " s left" : "Joe is eliminated",
       ents:[["John","h",[[0,92,48],[.78,160,76]]], ["Jacob","h",[[0,208,60],[.78,184,92]]], ["Joe", gone ? "x" : "h", [[0,118,126]]], ["Sam","s",[[0,150,80],[.5,176,96],[1,168,78]]]]}; },
   freeze: u => ({z:[150, 80, 70],
-    note: u < .25 ? "Sam chases John" : u < .68 ? "John is frozen · code 482" : "Jacob typed 482 · John is free",
+    note: u < .25 ? "Sam chases John" : u < .45 ? "John is frozen. His phone shows a code: 482" : u < .68 ? "Jacob runs over to help" : "Jacob typed 482 on his phone. John is free",
     ents:[["John", u >= .25 && u < .68 ? "f" : "h", [[0,100,60],[.68,100,60],[1,78,98]]], ["Jacob","h",[[0,205,55],[.42,205,55],[.68,114,64],[1,150,42]]],
           ["Joe","h",[[0,168,124],[.45,168,124],[1,124,134]]], ["Sam","s",[[0,150,80],[.25,104,63],[.5,186,112],[1,140,128]]]]})
 };
@@ -786,6 +787,7 @@ function drawDemo(){
   x.beginPath(); x.rect(0, 0, 300, 160); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2, true); x.fillStyle = "rgba(60,30,110,.3)"; x.fill("evenodd");
   x.beginPath(); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2); x.strokeStyle = cZ; x.lineWidth = 2; x.stroke();
   for (const [name, kind, pos] of d.ents){
+    if (kind === "n") continue;
     const [px, py] = Array.isArray(pos[0]) ? along(pos, u) : pos;
     if (d.ping >= 0 && kind === "h"){ x.beginPath(); x.arc(px, py, 7 + d.ping*14, 0, Math.PI*2); x.strokeStyle = cH; x.globalAlpha = 1 - d.ping*.8; x.lineWidth = 2; x.stroke(); x.globalAlpha = 1; }
     x.fillStyle = kind === "s" ? cS : kind === "x" ? cO : kind === "f" ? "#9CC9F5" : cH; x.strokeStyle = "#fff"; x.lineWidth = 1.5;
