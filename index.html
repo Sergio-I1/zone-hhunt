@@ -139,6 +139,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .endwrap{inset:0;z-index:1200;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 55%,transparent);padding:16px}
 .endcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:380px;width:100%;display:grid;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.3)}
 .endcard h2{margin:0;font-family:var(--font-display);font-weight:900;font-size:46px;line-height:.9;text-transform:uppercase}
+.endcard h2.packed{color:var(--zone)}
 .endcard h2.hiders{color:var(--hider)} .endcard h2.seekers{color:var(--seeker)}
 .endcard p{margin:0;color:var(--muted);font-size:14px}
 .endcard dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
@@ -251,6 +252,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
           <li>Caught hiders drop any power-ups they were holding.</li>
           <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
+          <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
           <li>Power-up list with icons under Advanced settings.</li>
           <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
         </ul>
@@ -288,6 +290,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
+          <p class="msg" id="demoHint"></p>
           <div class="previews">
             <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
             <figure class="mock" aria-label="Example of the hider's screen">
@@ -399,6 +402,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <div class="actions">
         <button class="act thaw" type="button" id="thawBtn" hidden>Unfreeze</button>
         <button class="act tag" type="button" id="tagBtn" hidden>Tag hider</button>
+        <button class="act caught" type="button" id="packBtn" hidden>I found them · hide too</button>
         <button class="act caught" type="button" id="caughtBtn" hidden>I got caught</button>
         <button class="act join" type="button" id="turnBtn" hidden>Turn into a seeker</button>
         <span class="counts" id="counts"></span>
@@ -436,7 +440,9 @@ const MODES = {
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
   zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."},
   freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen.",
-             how:"To unfreeze someone, you must be close enough (inside the tag range), read the code off their phone, and type it on your own phone."}
+             how:"To unfreeze someone, you must be close enough (inside the tag range), read the code off their phone, and type it on your own phone."},
+  sardines: {name:"Sardines",           blurb:"One hider, everyone else seeks. Find the hider and you hide with them. The last seeker left looking loses.",
+             how:"When you find the hider, tap \"I found them\" and you become a hider too. Seekers can't see each other on the map, so nobody can follow you there."}
 };
 const ITEMS = {
   life:  {icon:"❤️", name:"Extra life", desc:"Adds a life the moment you pick it up."},
@@ -580,6 +586,7 @@ function onEvent(m){
       addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : m.fz ? " froze " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : m.fz ? " is frozen" : " got caught"));
       if (m.by === me.id){ me.tags++; pubMe(); toast("You got " + nameOf(m.id)); }
       break;
+    case "found": addLog(nameOf(m.id) + " found the hiding spot"); break;
     case "zoneout": addLog(nameOf(m.id) + " was eliminated by the zone"); break;
     case "turned": addLog(nameOf(m.id) + " turned into a seeker"); break;
   }
@@ -739,7 +746,7 @@ function renderLobby(force){
   $("#mockHearts").textContent = "♥".repeat(cfg.lives); $("#mockBank").hidden = !cfg.powerups;
   const rnd = !!cfg.randomRoles;
   $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
-  $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd;
+  $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd || cfg.mode === "sardines";
   $("#rosterHint").textContent = rnd ? "roles are revealed when the game starts" : host ? "tap a role to switch it" : "tap your role to switch it";
   $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
   $("#gpsLobby").textContent = gpsErr || (me.acc != null ? "Your GPS: ±" + Math.round(me.acc) + " m" : "Finding your location…");
@@ -766,11 +773,13 @@ function renderLobby(force){
   }
   const fresh = list.filter(p => now - p.seen <= STALE), h = fresh.filter(p => p.role === "hider").length, s = fresh.length - h;
   const ns = Math.max(1, Math.min(cfg.nSeekers || 1, fresh.length - 1));
-  $("#teamCount").textContent = rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
+  const sard = cfg.mode === "sardines";
+  $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
   let why = "";
   if (!cfg.center) why = "Waiting for your GPS so the zone can be placed.";
   else if (fresh.length < 2) why = "Share the code so at least one more player can join.";
+  else if (!rnd && sard && h !== 1) why = "Sardines needs exactly one hider. Everyone else seeks.";
   else if (!rnd && (!h || !s)) why = "You need at least one hider and one seeker.";
   sb.disabled = !!why;
   sm.className = "msg" + (host && why ? " err" : "");
@@ -793,7 +802,7 @@ function startGame(){
   if (cfg.randomRoles){
     const list = [...players.values()].filter(p => Date.now() - p.seen <= STALE);
     for (let i = list.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    const n = Math.max(1, Math.min(cfg.nSeekers || 1, list.length - 1)); roles = {};
+    const n = cfg.mode === "sardines" ? list.length - 1 : Math.max(1, Math.min(cfg.nSeekers || 1, list.length - 1)); roles = {};
     list.forEach((p, i) => roles[p.id] = i < n ? "seeker" : "hider");
   }
   hostSet({phase:"live", zones, items, itemSeq: cfg.plimit, roles, t0: Date.now() + 6500, winner:null, endedAt:null}, true);
@@ -818,6 +827,9 @@ const DEMOS = {                              // each returns {z:[x,y,r], note, p
   zone: u => { const z = demoZone(u), gone = u >= ZOUT + .2;
     return {z, note: u < .08 ? "The zone starts wide" : u < ZOUT ? "It never stops closing" : !gone ? "Joe is outside: " + Math.max(1, Math.ceil((ZOUT + .2 - u)/.2*3)) + " s left" : "Joe is eliminated",
       ents:[["John","h",[[0,92,48],[.78,160,76]]], ["Jacob","h",[[0,208,60],[.78,184,92]]], ["Joe", gone ? "x" : "h", [[0,118,126]]], ["Sam","s",[[0,150,80],[.5,176,96],[1,168,78]]]]}; },
+  sardines: u => ({z:[150, 80, 70],
+    note: u < .3 ? "John hides. Everyone else seeks" : u < .6 ? "Jacob found John and hides with him" : u < .9 ? "Joe squeezed in too" : "Sam is the last one looking",
+    ents:[["John","h",[[0,100,58]]], ["Jacob", u < .3 ? "s" : "h", [[0,190,60],[.3,110,64]]], ["Joe", u < .6 ? "s" : "h", [[0,165,125],[.35,200,95],[.6,94,70]]], ["Sam","s",[[0,150,80],[.4,205,110],[.8,150,125],[1,122,96]]]]}),
   freeze: u => ({z:[150, 80, 70],
     note: u < .25 ? "Sam chases John" : u < .45 ? "John is frozen. His phone shows a code: 482" : u < .68 ? "Jacob runs over to help" : "Jacob typed 482 on his phone. John is free",
     ents:[["John", u >= .25 && u < .68 ? "f" : "h", [[0,100,60],[.68,100,60],[1,78,98]]], ["Jacob","h",[[0,205,55],[.42,205,55],[.68,114,64],[1,150,42]]],
@@ -864,6 +876,7 @@ function zoneAt(t){
 
 /* ---------------- game rules ---------------- */
 function canSee(p){
+  if (cfg.mode === "sardines" && p.id !== me.id && me.role === "seeker" && p.role === "seeker" && me.st === "active" && !G.over) return false;   // or a vanishing seeker would give the spot away
   if (p.id === me.id || G.over || (me.st !== "active" && me.st !== "frozen") || p.st !== "active" || p.role === me.role) return true;
   if (p.role === "hider" && p.ghost > Date.now()) return false;
   if (!G.hunt) return p.role === "seeker";
@@ -899,6 +912,10 @@ function nearestFrozen(){ let best = null, bd = tagR(); const now = Date.now();
   for (const p of players.values()){ if (p.id === me.id || p.role !== "hider" || p.st !== "frozen" || now - p.seen > STALE) continue; const d = dist(me, p); if (d <= bd){ bd = d; best = p; } }
   return best; }
 function calcWinner(t, end){
+  if (cfg.mode === "sardines"){ let seek = 0, total = 0; const n0 = Date.now();
+    for (const p of players.values()) if (p.st === "active" && n0 - p.seen < 120000){ total++; if (p.role === "seeker") seek++; }
+    if (t >= end) return "hiders";
+    return t >= cfg.head + 5 && n0 - G.liveSince > 8000 && total >= 2 && seek <= (total >= 3 ? 1 : 0) ? "packed" : null; }
   const now = Date.now(); let free = 0;
   for (const p of players.values()) if (p.role === "hider" && p.st === "active" && now - p.seen < 120000) free++;
   if (t >= end) return free ? "hiders" : "seekers";
@@ -916,9 +933,10 @@ function showEnd(w){
   G.over = true; G.winner = w;
   const free = [...players.values()].filter(p => p.role === "hider" && p.st === "active");
   const top = [...players.values()].filter(p => p.tags > 0).sort((a, b) => b.tags - a.tags)[0];
-  const tl = $("#endTitle"); tl.textContent = w === "hiders" ? "Hiders win" : "Seekers win"; tl.className = w;
+  const sardEnd = cfg.mode === "sardines", lastS = [...players.values()].find(p => p.role === "seeker" && p.st === "active");
+  const tl = $("#endTitle"); tl.textContent = w === "packed" ? "All packed in" : w === "hiders" ? (sardEnd ? "Hider wins" : "Hiders win") : "Seekers win"; tl.className = w;
   const endT = ((cfg.endedAt || Date.now()) - cfg.t0)/1000;
-  $("#endSub").textContent = w === "hiders" ? (free.length ? free.map(p => p.name).join(", ") + " stayed free." : "The hiders held out.") : "Every hider was found.";
+  $("#endSub").textContent = w === "packed" ? (lastS ? lastS.name + " was the last one looking." : "Everyone found the hiding spot.") : sardEnd ? "Time ran out before everyone found the spot." : w === "hiders" ? (free.length ? free.map(p => p.name).join(", ") + " stayed free." : "The hiders held out.") : "Every hider was found.";
   const rows = [["Mode", MODES[cfg.mode].name], ["Hunt time", fmt(Math.max(0, Math.min(endT, cfg.head + cfg.minutes*60) - cfg.head))],
                 ["Top tagger", top ? top.name + " (" + top.tags + ")" : "Nobody"],
                 ["You", me.st === "active" ? (me.role === "hider" ? "Survived" : "Seeker to the end") : me.st === "caught" ? "Caught" : me.st === "frozen" ? "Frozen" : "Eliminated"]];
@@ -1003,17 +1021,18 @@ function hud(t, end){
     else if (me.role === "hider" && G.hunt){ const n = nearestOf("seeker"); if (n && n.d <= ALERT){ kind = "danger"; txt = "Seeker nearby · " + Math.round(n.d) + " m"; } }
     else if (me.role === "seeker"){
       if (!G.hunt){ kind = "zone"; txt = "Stay at base · released in " + fmt(cfg.head - t); }
-      else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= sight()*1.6){ kind = "spot"; txt = n.d <= tagR() ? "In reach · tag " + dn(n.p) + "!" : "Hider spotted · " + Math.round(n.d) + " m"; } }
+      else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= sight()*1.6){ kind = "spot"; txt = n.d <= tagR() ? (cfg.mode === "sardines" ? "You found " + dn(n.p) + "! Hide with them" : "In reach · tag " + dn(n.p) + "!") : "Hider spotted · " + Math.round(n.d) + " m"; } }
     }
   }
   const al = $("#alert"); al.hidden = !txt; al.textContent = txt; al.className = "over alert " + kind;
 
   const reach = nearestOf("hider"), tb = $("#tagBtn"), inR = !!(reach && reach.d <= tagR() && G.hunt), safe = inR && reach.p.safe > Date.now();
-  tb.hidden = !(me.role === "seeker" && me.st === "active") || over;
+  tb.hidden = !(me.role === "seeker" && me.st === "active") || over || cfg.mode === "sardines";
+  const pk = $("#packBtn"); pk.hidden = !(cfg.mode === "sardines" && me.role === "seeker" && me.st === "active") || over; pk.disabled = !inR;
   tb.disabled = !inR || safe;
   tb.textContent = safe ? dn(reach.p) + " is safe " + fmt((reach.p.safe - Date.now())/1000) : inR ? "Tag " + dn(reach.p) : "Tag hider";
   const hid = me.role === "hider" && me.st === "active" && !over, nowH = Date.now();
-  $("#hearts").innerHTML = me.role === "hider" && !over ? "♥".repeat(Math.max(0, me.lives)) + "<s>" + "♥".repeat(Math.max(0, cfg.lives - me.lives)) + "</s>" : "";
+  $("#hearts").innerHTML = me.role === "hider" && !over && cfg.mode !== "sardines" ? "♥".repeat(Math.max(0, me.lives)) + "<s>" + "♥".repeat(Math.max(0, cfg.lives - me.lives)) + "</s>" : "";
   const isig = hid ? me.inv.join() : "-";
   if (isig !== invSig){ invSig = isig; $("#inv").innerHTML = hid ? me.inv.map((k, i) => '<button class="pu" type="button" data-i="' + i + '">' + ITEMS[k].icon + " " + ITEMS[k].name + "</button>").join("") : ""; }
   $("#buffs").textContent = [hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.alias ? "🎭 Seekers see you as " + me.alias : "",
@@ -1022,7 +1041,7 @@ function hud(t, end){
   G.thawTarget = fzn; th.hidden = !fzn; if (fzn) th.textContent = "Unfreeze " + fzn.name;
   const jam = $("#jam"), jl = (G.jamUntil - nowH)/1000;
   jam.hidden = !(me.role === "seeker" && me.st === "active" && jl > 0 && !over); if (!jam.hidden) jam.textContent = "Signal jammed · " + fmt(jl);
-  $("#caughtBtn").hidden = !(me.role === "hider" && me.st === "active" && G.hunt) || over;
+  $("#caughtBtn").hidden = !(me.role === "hider" && me.st === "active" && G.hunt) || over || cfg.mode === "sardines";
   $("#turnBtn").hidden = !(me.st !== "active" && cfg.mode !== "infection" && cfg.mode !== "freeze") || over;
   $("#endBtn").hidden = !isHost() || cfg.phase !== "live";
   $("#gpsOut").textContent = test ? "Test mode · tap map to move" : gpsErr || (me.acc != null ? "GPS ±" + Math.round(me.acc) + " m" : "GPS …");
@@ -1111,6 +1130,10 @@ $("#shareBtn").addEventListener("click", async () => {
 });
 $("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= tagR() && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
 $("#caughtBtn").addEventListener("click", () => gotCaught(null));
+$("#packBtn").addEventListener("click", () => {
+  const n = nearestOf("hider"); if (!cfg || cfg.mode !== "sardines" || me.role !== "seeker" || !n || n.d > tagR() || !G.hunt) return;
+  me.role = "hider"; me.inv = []; ev({t:"found", id:me.id}); pubMe(); toast("You're in. Stay hidden"); tick();
+});
 let shRes = null;
 function sheet(title, choices, input){
   return new Promise(res => { if (shRes) shRes(null); shRes = res; G.shChoices = choices || [];
@@ -1163,6 +1186,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 buildLobbyControls();
 $("#puList").innerHTML = Object.values(ITEMS).map(it => "<li><i>" + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + "</span></li>").join("");
 requestAnimationFrame(drawDemo);
+$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " each game mode to see how it works.";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)) $("#codeIn").value = hashCode;
