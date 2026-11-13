@@ -208,6 +208,24 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mcount{color:var(--muted);font-size:8px}
 .mbtn{color:#fff;font-weight:800;font-size:9px;text-align:center;padding:6px 4px;border-radius:7px}
 .status #inv{margin-left:auto;justify-content:flex-end}
+.endcard{max-height:100%;overflow:auto;max-width:460px}
+.endcard h3{margin:6px 0 0;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+.endcard table{border-collapse:collapse;width:100%;font-size:13px}
+.endcard th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 10px 4px 0;white-space:nowrap}
+.endcard td{padding:6px 10px 6px 0;border-top:1px solid var(--line);vertical-align:top}
+.endcard td:first-child{font-weight:700;white-space:nowrap}
+.endcard td .mark{width:10px;height:10px;margin-right:6px}
+.endcard td.num{font-family:var(--font-mono);white-space:nowrap}
+.endcard td small{display:block;font-weight:500;font-size:11.5px;color:var(--muted);margin-left:16px}
+.endcard th:last-child,.endcard td:last-child{padding-right:0;text-align:right}
+.resbtn{left:50%;bottom:64px;transform:translateX(-50%);z-index:1150;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.reveal.small strong{font-size:clamp(44px,14vw,92px)}
+.reveal strong.packed{color:#B48CFF} .reveal strong.hiders{color:#6A9BFF} .reveal strong.seekers{color:#FF7A4D}
+.cm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
+.cm i{font-style:normal;width:20px;height:20px;border-radius:50%;background:#18211C;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:11px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.cm.found i{background:var(--zone)}
+.cm b{position:absolute;top:calc(100% + 3px);white-space:nowrap;font:700 10.5px var(--font-body);color:#fff;background:#18211C;padding:1px 6px;border-radius:6px}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -253,6 +271,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Caught hiders drop any power-ups they were holding.</li>
           <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
           <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
+          <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
           <li>Power-up list with icons under Advanced settings.</li>
           <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
         </ul>
@@ -347,6 +366,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               <h3>What each power-up does</h3>
               <ul class="pulist" id="puList"></ul>
             </section>
+            <section class="sec"><h3>Results</h3>
+              <label class="check"><input type="checkbox" id="cReplay"> <span><b>Movement time-lapse.</b> Records where everyone went, so you can replay the whole game on the map afterwards.</span></label>
+            </section>
           </div>
         </details>
       </fieldset>
@@ -378,6 +400,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <span><i class="mark hider"></i>Hider</span><span><i class="mark seeker"></i>Seeker</span><span><i class="ring"></i>Next zone</span>
       </div>
       <div class="over jam" id="jam" hidden></div>
+      <div class="over alert zone" id="replayClock" hidden></div>
+      <button class="over resbtn act go" type="button" id="resBtn" hidden>Back to results</button>
       <div class="over sheet" id="sheet" hidden>
         <h3 id="shTitle"></h3>
         <div class="choices" id="shChoices"></div>
@@ -389,6 +413,14 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <h2 id="endTitle"></h2>
           <p id="endSub"></p>
           <dl id="endStats"></dl>
+          <h3>Your game</h3>
+          <dl id="myStats"></dl>
+          <h3>Everyone</h3>
+          <div class="tblwrap"><table id="allStats"></table></div>
+          <div class="endbtns">
+            <button class="ghost" type="button" id="mapBtn">See it on the map</button>
+            <button class="ghost" type="button" id="replayBtn">Play time-lapse</button>
+          </div>
           <div class="endbtns">
             <button class="act go" type="button" id="againBtn">Back to lobby</button>
             <button class="ghost" type="button" id="endLeaveBtn">Leave game</button>
@@ -417,7 +449,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
   </section>
 </div>
 
-<div class="reveal" id="reveal" hidden><div><small>You are a</small><strong id="revRole"></strong><span id="revTip"></span></div></div>
+<div class="reveal" id="reveal" hidden><div><small id="revSmall">You are a</small><strong id="revRole"></strong><span id="revTip"></span></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
@@ -477,7 +509,7 @@ let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
             pings:[], log:[], liveSince:0,
-            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), thawTarget:null, shChoices:[] };
+            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, thawTarget:null, shChoices:[] };
 const dn = p => (me.role === "seeker" && p.role === "hider" && p.alias) ? p.alias : p.name;   // name swap fools seekers only
 if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
@@ -563,7 +595,7 @@ function onEvent(m){
     case "bye": if (m.from !== me.id) players.delete(m.from); break;
     case "role": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.role = m.role; pubMe(); } break;
     case "tag": if (m.to === me.id) loseLife(m.from); break;
-    case "hit": addLog(nameOf(m.by) + " tagged " + nameOf(m.id) + " · " + m.left + (m.left === 1 ? " life" : " lives") + " left");
+    case "hit": rec("hit", m); addLog(nameOf(m.by) + " tagged " + nameOf(m.id) + " · " + m.left + (m.left === 1 ? " life" : " lives") + " left");
       if (m.by === me.id) toast("Tagged " + nameOf(m.id) + " · " + m.left + " left"); break;
     case "thaw":
       if (m.to === me.id && me.st === "frozen"){
@@ -571,7 +603,7 @@ function onEvent(m){
           ev({t:"thawed", id:me.id, by:m.from}); pubMe(); toast("Unfrozen! Run"); }
         else ev({t:"nope", to:m.from});
       } break;
-    case "thawed": addLog(nameOf(m.by) + " unfroze " + nameOf(m.id)); break;
+    case "thawed": rec("thawed", m); addLog(nameOf(m.by) + " unfroze " + nameOf(m.id)); break;
     case "nope": if (m.to === me.id) toast("Wrong code"); break;
     case "take":
       if (!G.taken.has(m.item)){ G.taken.set(m.item, m.from);
@@ -583,11 +615,12 @@ function onEvent(m){
       if (m.id === me.id) toast("You were ratted out! Seekers can see you"); else if (me.role === "seeker") toast(nameOf(m.id) + " was ratted out"); break;
     case "decoy": G.pings.push({lat:m.lat, lng:m.lng, name: cfg.pingNames ? String(m.name || "").slice(0, 16) : "", until:m.until, id:m.id}); break;
     case "caught":
+      rec(m.inf ? "infected" : m.fz ? "frozen" : "caught", m);
       addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : m.fz ? " froze " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : m.fz ? " is frozen" : " got caught"));
       if (m.by === me.id){ me.tags++; pubMe(); toast("You got " + nameOf(m.id)); }
       break;
-    case "found": addLog(nameOf(m.id) + " found the hiding spot"); break;
-    case "zoneout": addLog(nameOf(m.id) + " was eliminated by the zone"); break;
+    case "found": rec("found", m); addLog(nameOf(m.id) + " found the hiding spot"); break;
+    case "zoneout": rec("zoneout", m); addLog(nameOf(m.id) + " was eliminated by the zone"); break;
     case "turned": addLog(nameOf(m.id) + " turned into a seeker"); break;
   }
 }
@@ -636,7 +669,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, powerups:true, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, replay:true, powerups:true, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -681,7 +714,8 @@ function onPhase(prev){
   } else {
     if (prev !== "live" && prev !== "over"){
       Object.assign(me, {lives:cfg.lives, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:""});
-      G.rats.clear(); G.taken.clear(); G.pend.clear(); G.fullWarn.clear(); G.shortSince = 0; G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
+      G.rats.clear(); G.taken.clear(); G.hist = []; G.start.clear(); G.tracks.clear(); G.lastSample = 0; G.replay = null; $("#resBtn").hidden = true; $("#replayClock").hidden = true;
+      G.pend.clear(); G.fullWarn.clear(); G.shortSince = 0; G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
       if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; Object.assign(me, s.x || {}); }
       else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; if (cfg.roles) me.role = cfg.roles[me.id] || "hider"; }
       else { me.st = "caught"; me.lobbyRole = me.role; }           // walked into a game already running: spectate
@@ -699,19 +733,19 @@ function onPhase(prev){
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
             ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
             ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"]];
-const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"]];
+const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"], ["cReplay","replay"]];
 SL.push(["sPlim","oPlim","plimit", v => v + " in play"]);
 const poolTypes = () => Object.keys(ITEMS).filter(k => !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
 const dropIn = (z, lo, span) => { const a = Math.random()*Math.PI*2, d = (lo + span*Math.sqrt(Math.random()))*z.r; return offset(z, Math.cos(a)*d, Math.sin(a)*d); };
 SL.push(["sSeek","oSeek","nSeekers", v => v + (v == 1 ? " seeker" : " seekers")]);
 let revT = [];
-function reveal(){                           // black screen for 2 s, then your role
+function flashCard(small, big, cls, tip, wait, hold){          // full black screen, then big text
   const el = $("#reveal"), r = $("#revRole"); revT.forEach(clearTimeout);
-  r.textContent = me.role === "hider" ? "Hider" : "Seeker"; r.className = me.role;
-  $("#revTip").textContent = me.role === "hider" ? "Go hide!" : "Wait at base until you're released.";
-  el.classList.remove("on"); el.hidden = false;
-  revT = [setTimeout(() => el.classList.add("on"), 2000), setTimeout(() => el.classList.remove("on"), 5200), setTimeout(() => el.hidden = true, 5600)];
+  $("#revSmall").textContent = small; r.textContent = big; r.className = cls; $("#revTip").textContent = tip;
+  el.classList.toggle("small", big.length > 7); el.classList.remove("on"); el.hidden = false;
+  revT = [setTimeout(() => el.classList.add("on"), wait), setTimeout(() => el.classList.remove("on"), wait + hold), setTimeout(() => el.hidden = true, wait + hold + 400)];
 }
+const reveal = () => flashCard("You are a", me.role === "hider" ? "Hider" : "Seeker", me.role, me.role === "hider" ? "Go hide!" : "Wait at base until you're released.", 2000, 3200);
 function buildLobbyControls(){
   const box = $("#modes");
   for (const [k, m] of Object.entries(MODES)){
@@ -902,7 +936,7 @@ function gotCaught(by){                      // out of lives, or "I got caught"
   if (inf){ me.role = "seeker"; toast("You've been turned into a seeker"); }
   else if (fz){ me.st = "frozen"; me.fcode = String(100 + Math.floor(Math.random()*900)); toast("You're frozen"); }
   else { me.st = "caught"; toast("You got caught"); }
-  me.outSince = null; ev({t:"caught", id:me.id, by: by || null, inf, fz}); pubMe();
+  me.outSince = null; ev({t:"caught", id:me.id, by: by || null, inf, fz, lat:me.lat, lng:me.lng}); pubMe();
 }
 function grant(type){
   if (type === "life"){ me.lives = Math.min(cfg.lives + 1, me.lives + 1); toast("❤️ Extra life"); }
@@ -911,6 +945,32 @@ function grant(type){
 function nearestFrozen(){ let best = null, bd = tagR(); const now = Date.now();
   for (const p of players.values()){ if (p.id === me.id || p.role !== "hider" || p.st !== "frozen" || now - p.seen > STALE) continue; const d = dist(me, p); if (d <= bd){ bd = d; best = p; } }
   return best; }
+function rec(k, m){                          // remember what happened, for the results page
+  if (!cfg || cfg.phase !== "live") return; const p = players.get(m.id) || {};
+  G.hist.push({k, id:m.id, by:m.by || null, t: Math.max(0, (Date.now() - cfg.t0)/1000), lat: m.lat != null ? m.lat : p.lat, lng: m.lng != null ? m.lng : p.lng});
+}
+const OUTK = {caught:"Caught", infected:"Infected", frozen:"Frozen", zoneout:"Lost to the zone"};
+function buildStats(){
+  const endT = Math.max(0, Math.min(((cfg.endedAt || Date.now()) - cfg.t0)/1000, cfg.head + cfg.minutes*60));
+  const rows = [...players.values()].map(p => {
+    const start = G.start.get(p.id) || p.role, out = G.hist.find(h => h.id === p.id && OUTK[h.k]), found = G.hist.find(h => h.id === p.id && h.k === "found");
+    const hid = start === "hider" ? (out ? out.t : endT) : found ? endT - found.t : 0;
+    const tags = G.hist.filter(h => h.by === p.id && (OUTK[h.k] || h.k === "hit")).length;
+    const what = out ? OUTK[out.k] + " at " + fmt(out.t) + (out.by ? " by " + nameOf(out.by) : "") : found ? "Found the spot at " + fmt(found.t) : start === "hider" ? "Never caught" : "Seeker all game";
+    return {id:p.id, name:p.name, start, hid, tags, what, found: found ? found.t : null};
+  }).sort((a, b) => (a.start === b.start ? b.hid - a.hid : a.start === "hider" ? -1 : 1));
+  return {rows, endT};
+}
+function trackAt(id, t){ const tr = G.tracks.get(id); if (!tr || !tr.length) return null; let a = tr[0];
+  for (const b of tr){ if (t <= b[0]){ const f = b[0] === a[0] ? 0 : (t - a[0])/(b[0] - a[0]); return [a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f]; } a = b; } return [a[1], a[2]]; }
+function playReplay(){
+  const {endT} = buildStats(); G.replay = {start: performance.now(), dur: 20000, endT, t: 0};
+  $("#endWrap").hidden = true; $("#resBtn").hidden = false; follow = false; fitZone();
+  const step = () => { const r = G.replay; if (!r) return; const f = Math.min(1, (performance.now() - r.start)/r.dur); r.t = f*r.endT;
+    const c = $("#replayClock"); c.hidden = false; c.textContent = "Time-lapse · " + fmt(r.t) + " of " + fmt(r.endT);
+    renderMap(); if (f < 1) requestAnimationFrame(step); else { G.replay = null; setTimeout(() => { $("#replayClock").hidden = true; renderMap(); }, 1500); } };
+  step();
+}
 function calcWinner(t, end){
   if (cfg.mode === "sardines"){ let seek = 0, total = 0; const n0 = Date.now();
     for (const p of players.values()) if (p.st === "active" && n0 - p.seen < 120000){ total++; if (p.role === "seeker") seek++; }
@@ -937,10 +997,23 @@ function showEnd(w){
   const tl = $("#endTitle"); tl.textContent = w === "packed" ? "All packed in" : w === "hiders" ? (sardEnd ? "Hider wins" : "Hiders win") : "Seekers win"; tl.className = w;
   const endT = ((cfg.endedAt || Date.now()) - cfg.t0)/1000;
   $("#endSub").textContent = w === "packed" ? (lastS ? lastS.name + " was the last one looking." : "Everyone found the hiding spot.") : sardEnd ? "Time ran out before everyone found the spot." : w === "hiders" ? (free.length ? free.map(p => p.name).join(", ") + " stayed free." : "The hiders held out.") : "Every hider was found.";
-  const rows = [["Mode", MODES[cfg.mode].name], ["Hunt time", fmt(Math.max(0, Math.min(endT, cfg.head + cfg.minutes*60) - cfg.head))],
-                ["Top tagger", top ? top.name + " (" + top.tags + ")" : "Nobody"],
-                ["You", me.st === "active" ? (me.role === "hider" ? "Survived" : "Seeker to the end") : me.st === "caught" ? "Caught" : me.st === "frozen" ? "Frozen" : "Eliminated"]];
-  $("#endStats").innerHTML = rows.map(r => "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
+  const st = buildStats(), mine = st.rows.find(r => r.id === me.id) || {start:me.role, hid:0, tags:0, what:""};
+  let topH = "";
+  if (sardEnd){ const f = st.rows.filter(r => r.found != null).sort((x, y) => x.found - y.found), loser = lastS ? lastS.name : f.length > 1 ? f[f.length - 1].name : null;
+    if (f[0]) topH += "<dt>Winner</dt><dd>" + esc(f[0].name) + " found the hider first, at " + fmt(f[0].found) + "</dd>";
+    if (loser) topH += "<dt>Last one</dt><dd>" + esc(loser) + (lastS ? " never found the spot" : " was the last to find it") + "</dd>"; }
+  const best = [...st.rows].sort((x, y) => y.tags - x.tags)[0];
+  topH += "<dt>Mode</dt><dd>" + esc(MODES[cfg.mode].name) + "</dd><dt>Game time</dt><dd>" + fmt(st.endT) + "</dd>";
+  if (!sardEnd) topH += "<dt>Top tagger</dt><dd>" + (best && best.tags ? esc(best.name) + " (" + best.tags + ")" : "Nobody") + "</dd>";
+  $("#endStats").innerHTML = topH;
+  const cap = r => r === "hider" ? "Hider" : "Seeker";
+  $("#myStats").innerHTML = [["Started as", cap(mine.start)], ["Time as a hider", mine.hid ? fmt(mine.hid) : "None"], ["What happened", mine.what || "Watched"], ["Tags made", String(mine.tags)]]
+    .map(r => "<dt>" + r[0] + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
+  $("#allStats").innerHTML = "<tr><th>Player</th><th>As hider</th><th>What happened</th><th>Tags</th></tr>" + st.rows.map(r =>
+    '<tr><td><i class="mark ' + r.start + '"></i>' + esc(r.name) + "<small>Started as " + r.start + '</small></td><td class="num">' + (r.hid ? fmt(r.hid) : "–") + "</td><td>" + esc(r.what) + '</td><td class="num">' + r.tags + "</td></tr>").join("");
+  $("#replayBtn").hidden = !(cfg.replay && G.tracks.size);
+  $("#mapBtn").hidden = !G.hist.some(h => h.lat != null && (OUTK[h.k] || h.k === "found"));
+  flashCard("Game over", tl.textContent, w, cap(mine.start) + " · " + (mine.what || "Watched") + (mine.tags ? " · " + mine.tags + " tag" + (mine.tags === 1 ? "" : "s") : ""), 300, 3400);
   $("#againBtn").hidden = !isHost(); $("#endWait").hidden = isHost();
   $("#endWrap").hidden = false;
 }
@@ -958,6 +1031,12 @@ function tick(){
   if (cfg.phase === "live"){
     G.over = false;
     if (G.hunt && !G.wasHunt){ addLog("Seekers released!"); toast("Seekers released"); }
+    if (t >= 0){
+      for (const p of players.values()) if (!G.start.has(p.id)) G.start.set(p.id, p.role);
+      if (cfg.replay && now - G.lastSample > 2000){ G.lastSample = now;
+        for (const p of players.values()){ if (p.lat == null || now - p.seen > STALE) continue; let tr = G.tracks.get(p.id); if (!tr) G.tracks.set(p.id, tr = []);
+          const l = tr[tr.length - 1]; if (!l || t - l[0] > 10 || dist({lat:l[1], lng:l[2]}, p) > 3) tr.push([t, p.lat, p.lng]); } }
+    }
     G.wasHunt = G.hunt;
     if (G.zi.shrinking && G.zi.k !== G.announced){ if (G.announced !== 0 || t - sched(G.zi.k).start < 5){ addLog("The zone is closing in."); toast("Zone closing"); } G.announced = G.zi.k; }
     if (cfg.mode !== "manhunt" && G.hunt){
@@ -1049,7 +1128,7 @@ function hud(t, end){
 
 /* ---------------- map ---------------- */
 let Lz, Ln, Ls, shadeKey = "", fitKey = "";
-const markers = new Map(), pingMarkers = new Map(), itemMarkers = new Map();
+const markers = new Map(), pingMarkers = new Map(), itemMarkers = new Map(), catchMarkers = new Map();
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function initMap(){
   map = L.map("map", {zoomControl:false}).setView([29.8884, -97.9384], 16);
@@ -1084,14 +1163,21 @@ function renderMap(){
   const now = Date.now(), lobby = cfg.phase === "lobby", seen = new Set();
   for (const p of players.values()){
     if (p.lat == null || !(lobby || canSee(p))) continue;
+    const rp = G.replay ? trackAt(p.id, G.replay.t) : null; if (G.replay && !rp) continue;
     seen.add(p.id);
     const idle = !!p.away || now - p.seen > STALE, role = lobby && cfg.randomRoles ? "hider" : p.role, sig = [role, p.st, dn(p), idle].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
       m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (idle ? " 💤" : "")) + "</b><i></i></div>"})); }
-    m.setLatLng([p.lat, p.lng]);
+    m.setLatLng(rp || [p.lat, p.lng]);
   }
+  const liveC = new Set();                   // where people were caught or found the spot: shown once the game is over
+  if (!lobby && G.over) G.hist.forEach((h, i) => {
+    if (h.lat == null || !(OUTK[h.k] || h.k === "found") || (G.replay && h.t > G.replay.t)) return; liveC.add(i);
+    if (!catchMarkers.has(i)) catchMarkers.set(i, L.marker([h.lat, h.lng], {interactive:false, keyboard:false, zIndexOffset:500, icon:L.divIcon({className:"", iconSize:[0, 0],
+      html:'<div class="cm ' + h.k + '"><i>' + (h.k === "found" ? "★" : "✕") + "</i><b>" + esc(nameOf(h.id)) + " " + fmt(h.t) + "</b></div>"})}).addTo(map)); });
+  for (const [i, m] of catchMarkers) if (!liveC.has(i)){ m.remove(); catchMarkers.delete(i); }
   for (const [id, m] of markers) if (!seen.has(id)){ m.remove(); markers.delete(id); }
 
   const showPings = !lobby && (me.role === "seeker" || me.st !== "active" || G.over), live = new Set();
@@ -1130,9 +1216,12 @@ $("#shareBtn").addEventListener("click", async () => {
 });
 $("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= tagR() && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
 $("#caughtBtn").addEventListener("click", () => gotCaught(null));
+$("#mapBtn").addEventListener("click", () => { $("#endWrap").hidden = true; $("#resBtn").hidden = false; follow = false; fitZone(); renderMap(); });
+$("#resBtn").addEventListener("click", () => { G.replay = null; $("#replayClock").hidden = true; $("#resBtn").hidden = true; $("#endWrap").hidden = false; renderMap(); });
+$("#replayBtn").addEventListener("click", playReplay);
 $("#packBtn").addEventListener("click", () => {
   const n = nearestOf("hider"); if (!cfg || cfg.mode !== "sardines" || me.role !== "seeker" || !n || n.d > tagR() || !G.hunt) return;
-  me.role = "hider"; me.inv = []; ev({t:"found", id:me.id}); pubMe(); toast("You're in. Stay hidden"); tick();
+  me.role = "hider"; me.inv = []; ev({t:"found", id:me.id, lat:me.lat, lng:me.lng}); pubMe(); toast("You're in. Stay hidden"); tick();
 });
 let shRes = null;
 function sheet(title, choices, input){

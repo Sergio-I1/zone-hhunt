@@ -24,6 +24,7 @@ The whole app is `index.html`. No build step and no server to set up.
 - Lobby split into main settings and Advanced settings.
 - Caught hiders drop any power-ups they were holding.
 - Animated example of each game mode in the lobby.
+- Results page with your stats, everyone's stats, a catch map and a time-lapse replay.
 - New mode: Sardines. One hider, and everyone who finds them hides too.
 - Previews of the hider's and seeker's screens in the lobby.
 - Sleeping phones show at their last spot and resume on return.
