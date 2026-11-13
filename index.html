@@ -226,6 +226,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Caught hiders drop any power-ups they were holding.</li>
           <li>Animated example of each game mode in the lobby.</li>
           <li>Power-up list with icons under Advanced settings.</li>
+          <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
         </ul>
       </details>
       <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
@@ -419,7 +420,7 @@ const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
 const saved = store.get("zh-session", sessionStorage) || {};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
              lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
-             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"" };
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
@@ -485,12 +486,13 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
+             lives:me.lives, away:me.away, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
   const old = players.get(p.id);
   if (old && old.ts > p.ts) return;
+  if (old && p.id !== me.id && !!old.away !== !!p.away && cfg && cfg.phase === "live") addLog(p.away ? p.name + "'s phone went to sleep" : p.name + " is back");
   players.set(p.id, {...p, seen: Date.now()});
   if (p.took) for (const i of p.took) if (!G.taken.has(i)) G.taken.set(i, p.id);
 }
@@ -555,7 +557,12 @@ function startGPS(){
 function stopGPS(){ if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; } }
 let wake = null;
 async function keepAwake(){ try { if (navigator.wakeLock && document.visibilityState === "visible") wake = await navigator.wakeLock.request("screen"); } catch(e){} }
-document.addEventListener("visibilitychange", () => { if (cfg && cfg.phase === "live") keepAwake(); });
+document.addEventListener("visibilitychange", () => {          // phone locked, a call came in, or the player switched apps
+  me.away = document.visibilityState !== "visible";
+  if (!cfg || !N.client) return;
+  if (!me.away){ me.outSince = null; if (cfg.phase === "live") keepAwake(); if (!test && watchId != null){ stopGPS(); startGPS(); } }
+  pubMe(); if (!me.away) tick();
+});
 
 /* ---------------- create / join / leave ---------------- */
 function homeMsg(t, err){ const m = $("#homeMsg"); m.textContent = t; m.className = "msg" + (err ? " err" : ""); }
@@ -1010,11 +1017,11 @@ function renderMap(){
   for (const p of players.values()){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     seen.add(p.id);
-    const role = lobby && cfg.randomRoles ? "hider" : p.role, sig = [role, p.st, dn(p), now - p.seen > STALE].join("|");
+    const idle = !!p.away || now - p.seen > STALE, role = lobby && cfg.randomRoles ? "hider" : p.role, sig = [role, p.st, dn(p), idle].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "")) + "</b><i></i></div>"})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (idle ? " 💤" : "")) + "</b><i></i></div>"})); }
     m.setLatLng([p.lat, p.lng]);
   }
   for (const [id, m] of markers) if (!seen.has(id)){ m.remove(); markers.delete(id); }
