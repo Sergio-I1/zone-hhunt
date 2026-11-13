@@ -157,6 +157,15 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .sheet .choices{display:flex;flex-wrap:wrap;gap:8px}
 .check b{color:var(--ink)}
 .item{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--zone);display:grid;place-items:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none}
+.mark.unk{border-radius:50%;background:var(--out)}
+.rolebtn.unk{color:var(--muted);border-style:dashed}
+.reveal{position:fixed;inset:0;z-index:3000;background:#000;color:#fff;display:grid;place-items:center;text-align:center;padding:24px}
+.reveal div{display:grid;gap:6px;opacity:0;transition:opacity .35s}
+.reveal.on div{opacity:1}
+.reveal small{font:600 15px var(--font-body);letter-spacing:.2em;text-transform:uppercase;opacity:.7}
+.reveal strong{font-family:var(--font-display);font-weight:900;font-size:clamp(72px,24vw,150px);line-height:.9;text-transform:uppercase}
+.reveal strong.hider{color:#6A9BFF} .reveal strong.seeker{color:#FF7A4D}
+.reveal span{font:500 16px var(--font-body);opacity:.8}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -210,6 +219,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <section class="sec">
         <h2>Players <small id="rosterHint"></small></h2>
         <div class="roster" id="roster"></div>
+        <label class="check"><input type="checkbox" id="cRand"> <span><b>Secret random roles.</b> Nobody picks. When the game starts, each phone goes dark and then reveals if you're a hider or a seeker.</span></label>
+        <div class="slider" id="seekWrap" hidden><div class="top"><label class="lbl" for="sSeek">Seekers</label><output id="oSeek"></output></div><input type="range" id="sSeek" min="1" max="5" step="1"><small>How many players get picked as seekers.</small></div>
         <div class="rowbtns">
           <button class="ghost" id="shuffleBtn" type="button">Shuffle teams</button>
           <span class="teamcount" id="teamCount"></span>
@@ -318,6 +329,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
   </section>
 </div>
 
+<div class="reveal" id="reveal" hidden><div><small>You are a</small><strong id="revRole"></strong><span id="revTip"></span></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
@@ -525,7 +537,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         lives:2, grace:30, tagR:20, powerups:true, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, powerups:true, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -572,12 +584,12 @@ function onPhase(prev){
       Object.assign(me, {lives:cfg.lives, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:""});
       G.rats.clear(); G.taken.clear(); G.pend.clear(); G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
       if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; Object.assign(me, s.x || {}); }
-      else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; }
+      else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; if (cfg.roles) me.role = cfg.roles[me.id] || "hider"; }
       else { me.st = "caught"; me.lobbyRole = me.role; }           // walked into a game already running: spectate
       me.outSince = null; G.pings = []; G.log = []; G.lastPingIdx = null; G.announced = 0; G.winner = null;
       G.liveSince = Date.now(); G.wasHunt = Date.now() >= cfg.t0 + cfg.head*1000;
       follow = true; show("game"); keepAwake(); pubMe(); renderLog();
-      if (prev === "lobby"){ addLog("Game on: " + MODES[cfg.mode].name + ". Hiders have " + fmt(cfg.head) + " to hide."); toast(me.role === "hider" ? "Go hide!" : "You're a seeker. Wait at base"); }
+      if (prev === "lobby"){ addLog("Game on: " + MODES[cfg.mode].name + ". Hiders have " + fmt(cfg.head) + " to hide."); reveal(); }
     }
     if (cfg.phase === "over") showEnd(cfg.winner);
   }
@@ -588,7 +600,16 @@ function onPhase(prev){
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
             ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
             ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"]];
-const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"]];
+const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"]];
+SL.push(["sSeek","oSeek","nSeekers", v => v + (v == 1 ? " seeker" : " seekers")]);
+let revT = [];
+function reveal(){                           // black screen for 2 s, then your role
+  const el = $("#reveal"), r = $("#revRole"); revT.forEach(clearTimeout);
+  r.textContent = me.role === "hider" ? "Hider" : "Seeker"; r.className = me.role;
+  $("#revTip").textContent = me.role === "hider" ? "Go hide!" : "Wait at base until you're released.";
+  el.classList.remove("on"); el.hidden = false;
+  revT = [setTimeout(() => el.classList.add("on"), 2000), setTimeout(() => el.classList.remove("on"), 5200), setTimeout(() => el.hidden = true, 5600)];
+}
 function buildLobbyControls(){
   const box = $("#modes");
   for (const [k, m] of Object.entries(MODES)){
@@ -617,20 +638,23 @@ function renderLobby(force){
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
   $("#pdurWrap").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
-  $("#shuffleBtn").hidden = !host; $("#centerBtn").hidden = !host;
-  $("#rosterHint").textContent = host ? "tap a role to switch it" : "tap your role to switch it";
+  const rnd = !!cfg.randomRoles;
+  $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
+  $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd;
+  $("#rosterHint").textContent = rnd ? "roles are revealed when the game starts" : host ? "tap a role to switch it" : "tap your role to switch it";
   $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
   $("#gpsLobby").textContent = gpsErr || (me.acc != null ? "Your GPS: ±" + Math.round(me.acc) + " m" : "Finding your location…");
 
   const list = [...players.values()].sort((a, b) => (a.id === cfg.host ? -1 : b.id === cfg.host ? 1 : a.name.localeCompare(b.name) || a.id.localeCompare(b.id)));
-  const sig = list.map(p => [p.id, p.name, p.role, now - p.seen > STALE].join("|")).join(",") + host;
+  const sig = list.map(p => [p.id, p.name, p.role, now - p.seen > STALE].join("|")).join(",") + host + rnd;
   if (sig !== rosterSig || force){
     rosterSig = sig; const box = $("#roster"); box.innerHTML = "";
     for (const p of list){
       const stale = now - p.seen > STALE, mine = p.id === me.id;
       const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
       const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
-      row.innerHTML = '<i class="mark ' + p.role + '"></i><div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      row.innerHTML = '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i><div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       const b = document.createElement("button"); b.type = "button"; b.className = "rolebtn " + p.role; b.textContent = p.role === "hider" ? "Hider" : "Seeker";
       b.disabled = !(mine || host);
       b.addEventListener("click", () => {
@@ -642,12 +666,13 @@ function renderLobby(force){
     }
   }
   const fresh = list.filter(p => now - p.seen <= STALE), h = fresh.filter(p => p.role === "hider").length, s = fresh.length - h;
-  $("#teamCount").textContent = h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
+  const ns = Math.max(1, Math.min(cfg.nSeekers || 1, fresh.length - 1));
+  $("#teamCount").textContent = rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
   let why = "";
   if (!cfg.center) why = "Waiting for your GPS so the zone can be placed.";
   else if (fresh.length < 2) why = "Share the code so at least one more player can join.";
-  else if (!h || !s) why = "You need at least one hider and one seeker.";
+  else if (!rnd && (!h || !s)) why = "You need at least one hider and one seeker.";
   sb.disabled = !!why;
   sm.className = "msg" + (host && why ? " err" : "");
   sm.textContent = host ? (why || "Everyone should be at the center pin when you start.") : "Waiting for the host to start the game.";
@@ -667,7 +692,14 @@ function startGame(){
     for (let i = 0; i < 5; i++){ const a = Math.random()*Math.PI*2, d = (0.25 + 0.6*Math.sqrt(Math.random()))*cfg.startR;
       items.push({id:"i" + i, type: pool[(i + off) % pool.length], ...offset(cfg.center, Math.cos(a)*d, Math.sin(a)*d)}); }
   }
-  hostSet({phase:"live", zones, items, t0: Date.now() + 4000, winner:null, endedAt:null}, true);
+  let roles = null;
+  if (cfg.randomRoles){
+    const list = [...players.values()].filter(p => Date.now() - p.seen <= STALE);
+    for (let i = list.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
+    const n = Math.max(1, Math.min(cfg.nSeekers || 1, list.length - 1)); roles = {};
+    list.forEach((p, i) => roles[p.id] = i < n ? "seeker" : "hider");
+  }
+  hostSet({phase:"live", zones, items, roles, t0: Date.now() + 6500, winner:null, endedAt:null}, true);
 }
 
 /* ---------------- zone timeline ---------------- */
@@ -880,11 +912,11 @@ function renderMap(){
   for (const p of players.values()){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     seen.add(p.id);
-    const sig = [p.role, p.st, dn(p), now - p.seen > STALE].join("|");
+    const role = lobby && cfg.randomRoles ? "hider" : p.role, sig = [role, p.st, dn(p), now - p.seen > STALE].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + p.role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "")) + "</b><i></i></div>"})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (now - p.seen > STALE ? " stale" : "") + '"><b>' + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "")) + "</b><i></i></div>"})); }
     m.setLatLng([p.lat, p.lng]);
   }
   for (const [id, m] of markers) if (!seen.has(id)){ m.remove(); markers.delete(id); }
