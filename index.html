@@ -174,6 +174,13 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .ver{font-size:13px;color:var(--muted)}
 .ver summary{cursor:pointer;font-weight:600}
 .ver ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+.demo{display:grid;gap:6px}
+.demo canvas{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
+.demo p{margin:0;font-size:13px;color:var(--muted)}
+.pulist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pulist li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;font-size:13.5px;color:var(--muted)}
+.pulist i{font-style:normal;width:34px;height:34px;border-radius:50%;border:2px solid var(--zone);background:#fff;display:grid;place-items:center;font-size:17px}
+.pulist b{color:var(--ink)}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -217,6 +224,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Stacking switch: let hiders hold several power-ups, or only one at a time.</li>
           <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
           <li>Caught hiders drop any power-ups they were holding.</li>
+          <li>Animated example of each game mode in the lobby.</li>
+          <li>Power-up list with icons under Advanced settings.</li>
         </ul>
       </details>
       <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
@@ -251,7 +260,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       </section>
 
       <fieldset id="settings">
-        <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div></section>
+        <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
+          <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas><p id="demoCap"></p></div></section>
         <section class="sec"><h2>Game settings</h2>
           <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
@@ -285,6 +295,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
                 <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div>
               </div>
               <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups.</b> Off means a hider can hold only one at a time.</span></label>
+              <h3>What each power-up does</h3>
+              <ul class="pulist" id="puList"></ul>
             </section>
           </div>
         </details>
@@ -380,12 +392,12 @@ const MODES = {
   freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen."}
 };
 const ITEMS = {
-  life:  {icon:"❤️", name:"Extra life"},
-  jam:   {icon:"📡", name:"Jammer"},
-  ghost: {icon:"👻", name:"Ghost"},
-  rat:   {icon:"🐀", name:"Rat"},
-  decoy: {icon:"📍", name:"Decoy"},
-  swap:  {icon:"🎭", name:"Name swap"}
+  life:  {icon:"❤️", name:"Extra life", desc:"Adds a life the moment you pick it up."},
+  jam:   {icon:"📡", name:"Jammer",     desc:"Blacks out every seeker's map."},
+  ghost: {icon:"👻", name:"Ghost",      desc:"You vanish from the map and from pings."},
+  rat:   {icon:"🐀", name:"Rat",        desc:"Pick a teammate. Seekers see them live. Not in Manhunt."},
+  decoy: {icon:"📍", name:"Decoy",      desc:"Tap the map to drop a fake ping with any name."},
+  swap:  {icon:"🎭", name:"Name swap",  desc:"Seekers see you under another player's name for the rest of the round."}
 };
 const tagR = () => (cfg && cfg.tagR) || 20, sight = () => Math.max(SIGHT0, tagR());
 const $ = s => document.querySelector(s);
@@ -646,6 +658,9 @@ function buildLobbyControls(){
     const l = document.createElement("label"); l.className = "mode";
     l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + "</strong><span>" + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", () => isHost() && hostSet({mode:k}));
+    const pick = () => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); } };
+    l.addEventListener("pointerenter", pick); l.addEventListener("click", pick);
+    l.addEventListener("pointerleave", e => { if (e.pointerType === "mouse"){ demoMode = null; demoT0 = performance.now(); } });
     box.append(l);
   }
   for (const [sid, , key] of SL) $("#" + sid).addEventListener("input", e => {
@@ -728,6 +743,53 @@ function startGame(){
     list.forEach((p, i) => roles[p.id] = i < n ? "seeker" : "hider");
   }
   hostSet({phase:"live", zones, items, itemSeq: cfg.plimit, roles, t0: Date.now() + 6500, winner:null, endedAt:null}, true);
+}
+
+/* ---------------- mode previews: a tiny fake game for each mode ---------------- */
+let demoMode = null, demoT0 = performance.now(), demoCapKey = "";
+const along = (pts, u) => { let a = pts[0]; for (const b of pts){ if (u <= b[0]){ const f = b[0] === a[0] ? 0 : (u - a[0])/(b[0] - a[0]); return [a[1] + (b[1] - a[1])*f, a[2] + (b[2] - a[2])*f]; } a = b; } return [a[1], a[2]]; };
+const demoZone = u => { const e = ease(Math.min(1, Math.max(0, (u - .08)/.7))); return [150 + 22*e, 80 + 4*e, 70 - 44*e]; };
+let ZOUT = 1; for (let i = 0; i <= 200; i++){ const z = demoZone(i/200); if (Math.hypot(118 - z[0], 126 - z[1]) > z[2]){ ZOUT = i/200; break; } }
+const DEMOS = {                              // each returns {z:[x,y,r], note, ping, ents:[[name, kind, position]]}; kind: h hider, s seeker, x out, f frozen
+  classic: u => ({z:[150, 80, 70], ping: u >= .3 && u < .5 ? (u - .3)/.2 : -1,
+    note: u < .3 ? "Seekers can't see the hiders" : u < .5 ? "Ping! Hiders flash on the map" : u < .72 ? "Sam closes in" : "John is caught and out",
+    ents:[["John", u < .72 ? "h" : "x", [[0,105,55]]], ["Jacob","h",[[0,198,62]]], ["Joe","h",[[0,160,122]]], ["Sam","s",[[0,150,80],[.3,150,96],[.5,150,96],[.72,110,59]]]]}),
+  infection: u => ({z:[150, 80, 70],
+    note: u < .3 ? "Sam hunts alone" : u < .6 ? "John is infected: 2 seekers" : u < .92 ? "Jacob too: 3 seekers" : "Everyone is a seeker",
+    ents:[["John", u < .3 ? "h" : "s", [[0,100,60],[.3,100,60],[.6,205,92],[.92,120,116]]], ["Jacob", u < .6 ? "h" : "s", [[0,200,55],[.35,200,55],[.6,214,98],[.92,128,108]]],
+          ["Joe", u < .92 ? "h" : "s", [[0,150,125],[.65,150,125],[.92,112,122]]], ["Sam","s",[[0,150,80],[.3,104,63],[.6,210,100],[.92,116,126]]]]}),
+  manhunt: u => { const o = (ph, a, b) => [150 + a*Math.cos(2*Math.PI*(u + ph)), 80 + b*Math.sin(4*Math.PI*(u + ph))];
+    return {z:[150, 80, 70], note:"Everyone is on the map the whole time", ents:[["John","h",o(0,55,38)], ["Jacob","h",o(.33,50,34)], ["Joe","h",o(.66,58,30)], ["Sam","s",o(.93,42,30)]]}; },
+  zone: u => { const z = demoZone(u), gone = u >= ZOUT + .2;
+    return {z, note: u < .08 ? "The zone starts wide" : u < ZOUT ? "It never stops closing" : !gone ? "Joe is outside: " + Math.max(1, Math.ceil((ZOUT + .2 - u)/.2*3)) + " s left" : "Joe is eliminated",
+      ents:[["John","h",[[0,92,48],[.78,160,76]]], ["Jacob","h",[[0,208,60],[.78,184,92]]], ["Joe", gone ? "x" : "h", [[0,118,126]]], ["Sam","s",[[0,150,80],[.5,176,96],[1,168,78]]]]}; },
+  freeze: u => ({z:[150, 80, 70],
+    note: u < .25 ? "Sam chases John" : u < .68 ? "John is frozen · code 482" : "Jacob typed 482 · John is free",
+    ents:[["John", u >= .25 && u < .68 ? "f" : "h", [[0,100,60],[.68,100,60],[1,78,98]]], ["Jacob","h",[[0,205,55],[.42,205,55],[.68,114,64],[1,150,42]]],
+          ["Joe","h",[[0,168,124],[.45,168,124],[1,124,134]]], ["Sam","s",[[0,150,80],[.25,104,63],[.5,186,112],[1,140,128]]]]})
+};
+const stillDemo = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function drawDemo(){
+  requestAnimationFrame(drawDemo);
+  if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
+  const k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((performance.now() - demoT0)/9000) % 1, d = DEMOS[k](u);
+  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker."; }
+  const x = $("#demo").getContext("2d"), ink = css("--ink"), cH = css("--hider"), cS = css("--seeker"), cZ = css("--zone"), cO = css("--out");
+  x.setTransform(2, 0, 0, 2, 0, 0); x.fillStyle = css("--surface-2"); x.fillRect(0, 0, 300, 160);
+  x.beginPath(); x.rect(0, 0, 300, 160); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2, true); x.fillStyle = "rgba(60,30,110,.3)"; x.fill("evenodd");
+  x.beginPath(); x.arc(d.z[0], d.z[1], d.z[2], 0, Math.PI*2); x.strokeStyle = cZ; x.lineWidth = 2; x.stroke();
+  for (const [name, kind, pos] of d.ents){
+    const [px, py] = Array.isArray(pos[0]) ? along(pos, u) : pos;
+    if (d.ping >= 0 && kind === "h"){ x.beginPath(); x.arc(px, py, 7 + d.ping*14, 0, Math.PI*2); x.strokeStyle = cH; x.globalAlpha = 1 - d.ping*.8; x.lineWidth = 2; x.stroke(); x.globalAlpha = 1; }
+    x.fillStyle = kind === "s" ? cS : kind === "x" ? cO : kind === "f" ? "#9CC9F5" : cH; x.strokeStyle = "#fff"; x.lineWidth = 1.5;
+    x.beginPath(); if (kind === "s"){ x.moveTo(px, py - 7); x.lineTo(px + 7, py); x.lineTo(px, py + 7); x.lineTo(px - 7, py); x.closePath(); } else x.arc(px, py, 5.5, 0, Math.PI*2);
+    x.fill(); x.stroke();
+    if (kind === "x"){ x.beginPath(); x.moveTo(px - 3, py - 3); x.lineTo(px + 3, py + 3); x.moveTo(px + 3, py - 3); x.lineTo(px - 3, py + 3); x.stroke(); }
+    x.font = "700 9px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText(name + (kind === "f" ? " ❄" : ""), px, py - 10);
+  }
+  x.font = "700 11px Figtree, system-ui, sans-serif"; x.textAlign = "left";
+  const nw = x.measureText(d.note).width; x.fillStyle = css("--surface"); x.globalAlpha = .9; x.beginPath(); x.roundRect(5, 5, nw + 12, 17, 6); x.fill(); x.globalAlpha = 1;
+  x.fillStyle = ink; x.fillText(d.note, 11, 17.5);
 }
 
 /* ---------------- zone timeline ---------------- */
@@ -1043,6 +1105,8 @@ $("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
 /* ---------------- boot ---------------- */
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 buildLobbyControls();
+$("#puList").innerHTML = Object.values(ITEMS).map(it => "<li><i>" + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + "</span></li>").join("");
+requestAnimationFrame(drawDemo);
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)) $("#codeIn").value = hashCode;

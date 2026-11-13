@@ -23,6 +23,8 @@ The whole app is `index.html`. No build step and no server to set up.
 - Stacking switch: hiders can hold several power-ups, or only one at a time.
 - Lobby split into main settings and Advanced settings.
 - Caught hiders drop any power-ups they were holding.
+- Animated example of each game mode in the lobby.
+- Power-up list with icons under Advanced settings.
 
 **v2**
 - Lives with escape time after a tag, and an adjustable tag range.
