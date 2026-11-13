@@ -166,6 +166,14 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .reveal strong{font-family:var(--font-display);font-weight:900;font-size:clamp(72px,24vw,150px);line-height:.9;text-transform:uppercase}
 .reveal strong.hider{color:#6A9BFF} .reveal strong.seeker{color:#FF7A4D}
 .reveal span{font:500 16px var(--font-body);opacity:.8}
+.adv{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.adv summary{cursor:pointer;padding:14px;font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:.04em;text-transform:uppercase}
+.advbody{display:grid;gap:22px;padding:4px 14px 16px}
+.sec h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sec.off{opacity:.45}
+.ver{font-size:13px;color:var(--muted)}
+.ver summary{cursor:pointer;font-weight:600}
+.ver ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -202,6 +210,15 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <button class="ghost" id="joinBtn" type="button">Join</button>
       </div>
       <p class="msg" id="homeMsg"></p>
+      <details class="ver">
+        <summary>Version 3 · what's new</summary>
+        <ul>
+          <li>Power-up limit: a set number are always in play. When one is used, a new one appears.</li>
+          <li>Stacking switch: let hiders hold several power-ups, or only one at a time.</li>
+          <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
+          <li>Caught hiders drop any power-ups they were holding.</li>
+        </ul>
+      </details>
       <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
     </div>
   </section>
@@ -235,33 +252,42 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div></section>
-        <section class="sec"><h2>Time limits</h2>
+        <section class="sec"><h2>Game settings</h2>
           <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait at base while hiders scatter.</small></div>
-            <div class="slider" id="pingWrap"><div class="top"><label class="lbl" for="sPing">Hider ping every</label><output id="oPing"></output></div><input type="range" id="sPing" min="1" max="5" step="1"><small>Every hider's spot flashes on the seekers' map.</small></div>
-          </div>
-        </section>
-        <section class="sec"><h2>The zone</h2>
-          <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sEnd">Smallest zone</label><output id="oEnd"></output></div><input type="range" id="sEnd" min="15" max="100" step="5"><small>How tight it gets at the end.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"><small>Number of times the circle closes in.</small></div>
-          </div>
-        </section>
-        <section class="sec"><h2>Tagging</h2>
-          <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags a hider can take. "I got caught" always ends it at once.</small></div>
-            <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>After a tag, the hider can't be tagged again for this long.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close a seeker must be for the Tag button to work.</small></div>
           </div>
+          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b> Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
         </section>
-        <section class="sec"><h2>Extras</h2>
-          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b> Five appear in the zone. Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
-          <div class="sliders"><div class="slider" id="pdurWrap"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div></div>
-          <label class="check"><input type="checkbox" id="cNames"> <span><b>Show names on pings.</b> Off means seekers see a ping but not whose it is.</span></label>
-          <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
-        </section>
+        <details class="adv">
+          <summary>Advanced settings</summary>
+          <div class="advbody">
+            <section class="sec"><h3>Zone and pings</h3>
+              <div class="sliders">
+                <div class="slider"><div class="top"><label class="lbl" for="sEnd">Smallest zone</label><output id="oEnd"></output></div><input type="range" id="sEnd" min="15" max="100" step="5"><small>How tight it gets at the end.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"><small>Number of times the circle closes in.</small></div>
+                <div class="slider" id="pingWrap"><div class="top"><label class="lbl" for="sPing">Hider ping every</label><output id="oPing"></output></div><input type="range" id="sPing" min="1" max="5" step="1"><small>Every hider's spot flashes on the seekers' map.</small></div>
+              </div>
+              <label class="check"><input type="checkbox" id="cNames"> <span><b>Show names on pings.</b> Off means seekers see a ping but not whose it is.</span></label>
+            </section>
+            <section class="sec"><h3>Tagging</h3>
+              <div class="sliders">
+                <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>After a tag, the hider can't be tagged again for this long.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close a seeker must be for the Tag button to work.</small></div>
+              </div>
+              <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
+            </section>
+            <section class="sec" id="powAdv"><h3>Power-ups</h3>
+              <div class="sliders">
+                <div class="slider"><div class="top"><label class="lbl" for="sPlim">Power-up limit</label><output id="oPlim"></output></div><input type="range" id="sPlim" min="1" max="10" step="1"><small>Total in play: on the map plus held by hiders. When one is used, a new one appears.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div>
+              </div>
+              <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups.</b> Off means a hider can hold only one at a time.</span></label>
+            </section>
+          </div>
+        </details>
       </fieldset>
 
       <div class="field">
@@ -386,7 +412,7 @@ let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
             pings:[], log:[], liveSince:0,
-            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, thawTarget:null, shChoices:[] };
+            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), thawTarget:null, shChoices:[] };
 const dn = p => (me.role === "seeker" && p.role === "hider" && p.alias) ? p.alias : p.name;   // name swap fools seekers only
 if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
@@ -447,7 +473,7 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
+             lives:me.lives, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
@@ -458,7 +484,8 @@ function applyPresence(p){
 }
 function applyCfg(c){
   if (cfg && c.rev <= cfg.rev) return;
-  const prev = cfg ? cfg.phase : null; cfg = c;
+  const prev = cfg ? cfg.phase : null, had = cfg && cfg.items ? new Set(cfg.items.map(i => i.id)) : null; cfg = c;
+  if (had && prev === "live" && cfg.phase === "live" && (cfg.items || []).some(i => !had.has(i.id))) addLog("A new power-up appeared");
   if (N.onCfg){ N.onCfg(); N.onCfg = null; }
   if (cfg.phase !== prev) onPhase(prev);
   renderLobby(true);
@@ -537,7 +564,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, powerups:true, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, powerups:true, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -582,7 +609,7 @@ function onPhase(prev){
   } else {
     if (prev !== "live" && prev !== "over"){
       Object.assign(me, {lives:cfg.lives, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:""});
-      G.rats.clear(); G.taken.clear(); G.pend.clear(); G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
+      G.rats.clear(); G.taken.clear(); G.pend.clear(); G.fullWarn.clear(); G.shortSince = 0; G.jamUntil = 0; G.armed = false; $("#sheet").hidden = true;
       if (s.code === code && s.t0 === cfg.t0 && s.role){ me.role = s.role; me.st = s.st || "active"; me.tags = s.tags || 0; me.lobbyRole = s.lobbyRole || s.role; Object.assign(me, s.x || {}); }
       else if (prev === "lobby"){ me.st = "active"; me.tags = 0; me.lobbyRole = me.role; if (cfg.roles) me.role = cfg.roles[me.id] || "hider"; }
       else { me.st = "caught"; me.lobbyRole = me.role; }           // walked into a game already running: spectate
@@ -600,7 +627,10 @@ function onPhase(prev){
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
             ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
             ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"]];
-const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"]];
+const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"]];
+SL.push(["sPlim","oPlim","plimit", v => v + " in play"]);
+const poolTypes = () => Object.keys(ITEMS).filter(k => !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
+const dropIn = (z, lo, span) => { const a = Math.random()*Math.PI*2, d = (lo + span*Math.sqrt(Math.random()))*z.r; return offset(z, Math.cos(a)*d, Math.sin(a)*d); };
 SL.push(["sSeek","oSeek","nSeekers", v => v + (v == 1 ? " seeker" : " seekers")]);
 let revT = [];
 function reveal(){                           // black screen for 2 s, then your role
@@ -636,7 +666,7 @@ function renderLobby(force){
   const r = $("#mode-" + cfg.mode); if (r) r.checked = true;
   const noPing = cfg.mode === "manhunt"; $("#pingWrap").classList.toggle("off", noPing); $("#sPing").disabled = noPing;
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
-  $("#pdurWrap").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
+  $("#powAdv").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
   const rnd = !!cfg.randomRoles;
   $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
@@ -687,10 +717,8 @@ function startGame(){
   }
   let items = null;
   if (cfg.powerups){
-    const pool = Object.keys(ITEMS).filter(k => !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
-    const off = Math.floor(Math.random()*pool.length); items = [];
-    for (let i = 0; i < 5; i++){ const a = Math.random()*Math.PI*2, d = (0.25 + 0.6*Math.sqrt(Math.random()))*cfg.startR;
-      items.push({id:"i" + i, type: pool[(i + off) % pool.length], ...offset(cfg.center, Math.cos(a)*d, Math.sin(a)*d)}); }
+    const pool = poolTypes(), off = Math.floor(Math.random()*pool.length); items = [];
+    for (let i = 0; i < cfg.plimit; i++) items.push({id:"i" + i, type: pool[(i + off) % pool.length], ...dropIn(zones[0], 0.25, 0.6)});
   }
   let roles = null;
   if (cfg.randomRoles){
@@ -699,7 +727,7 @@ function startGame(){
     const n = Math.max(1, Math.min(cfg.nSeekers || 1, list.length - 1)); roles = {};
     list.forEach((p, i) => roles[p.id] = i < n ? "seeker" : "hider");
   }
-  hostSet({phase:"live", zones, items, roles, t0: Date.now() + 6500, winner:null, endedAt:null}, true);
+  hostSet({phase:"live", zones, items, itemSeq: cfg.plimit, roles, t0: Date.now() + 6500, winner:null, endedAt:null}, true);
 }
 
 /* ---------------- zone timeline ---------------- */
@@ -739,7 +767,7 @@ function loseLife(by){                       // a seeker's Tag button: costs one
 }
 function gotCaught(by){                      // out of lives, or "I got caught"
   if (!canBeHit()) return;
-  const inf = cfg.mode === "infection", fz = cfg.mode === "freeze"; me.lives = 0;
+  const inf = cfg.mode === "infection", fz = cfg.mode === "freeze"; me.lives = 0; me.inv = [];
   if (inf){ me.role = "seeker"; toast("You've been turned into a seeker"); }
   else if (fz){ me.st = "frozen"; me.fcode = String(100 + Math.floor(Math.random()*900)); toast("You're frozen"); }
   else { me.st = "caught"; toast("You got caught"); }
@@ -815,7 +843,15 @@ function tick(){
     }
     if (cfg.items && me.st === "active" && t >= 0 && me.lat != null) for (const it of cfg.items){
       if (G.taken.has(it.id) || dist(me, it) > PICK_R || now - (G.pend.get(it.id) || 0) < 3000) continue;
+      if (me.role === "hider" && !cfg.pstack && me.inv.length){ if (!G.fullWarn.has(it.id)){ G.fullWarn.add(it.id); toast("Hands full. Use your power-up first"); } continue; }
       G.pend.set(it.id, now); ev({t:"take", item:it.id});
+    }
+    if (isHost() && cfg.powerups && cfg.items && t >= 0){      // keep the total in play (map + held) at the limit
+      const left = cfg.items.filter(i => !G.taken.has(i.id)); let n = left.length;
+      for (const p of players.values()) if (p.st === "active" && now - p.seen < 60000) n += p.nInv || 0;
+      if (n >= cfg.plimit) G.shortSince = 0; else if (!G.shortSince) G.shortSince = now;
+      else if (now - G.shortSince > 8000){ G.shortSince = 0; const pool = poolTypes(), seq = cfg.itemSeq || 0;
+        hostSet({itemSeq: seq + 1, items: [...left, {id:"i" + seq, type: pool[Math.floor(Math.random()*pool.length)], ...dropIn(G.zi.cur, 0.15, 0.7)}]}); addLog("A new power-up appeared"); }
     }
     const w = calcWinner(t, end);
     if (w){ if (isHost()) hostSet({phase:"over", winner:w, endedAt:now}, true); else showEnd(w); }
