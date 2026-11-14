@@ -1,0 +1,22 @@
+{
+  "name": "zone-hunt",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Zone Hunt: native iPhone wrapper (Capacitor). The game itself is index.html.",
+  "scripts": {
+    "www": "node scripts/build-www.mjs",
+    "ios:prepare": "npm run www && npx cap add ios && npx capacitor-assets generate --ios && node scripts/patch-ios.mjs"
+  },
+  "dependencies": {
+    "@capacitor-community/background-geolocation": "^1.2.19",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.2.0",
+    "leaflet": "1.9.4",
+    "mqtt": "5.10.1",
+    "qrcode-generator": "1.4.4"
+  }
+}

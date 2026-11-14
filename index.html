@@ -711,9 +711,21 @@ function onEvent(m){
 
 /* ---------------- location ---------------- */
 let watchId = null, gpsErr = "";
+const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());   // true inside the iPhone app, false on the website
+let BG = null; try { if (NATIVE) BG = Capacitor.registerPlugin("BackgroundGeolocation"); } catch(e){}
+function onFix(lat, lng, acc){
+  gpsErr = ""; const moved = dist(me, {lat, lng}); me.lat = lat; me.lng = lng; me.acc = acc;
+  if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
+  if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
+}
 function startGPS(){
   if (test){ const c = (cfg && cfg.center) || {lat:29.8884, lng:-97.9384}; const p = offset(c, (Math.random()-.5)*30, (Math.random()-.5)*30); me.lat = p.lat; me.lng = p.lng; me.acc = 3; return; }
   if (watchId != null) return;
+  if (BG){ watchId = "pending";
+    BG.addWatcher({backgroundTitle:"Zone Hunt game in progress", backgroundMessage:"Sharing your location with your game.", requestPermissions:true, stale:false, distanceFilter:2},
+      (loc, err) => { if (err){ gpsErr = err.code === "NOT_AUTHORIZED" ? "Location is off for Zone Hunt. Turn it on in Settings, set to Always." : "Waiting for a GPS signal…"; return; } if (loc) onFix(loc.latitude, loc.longitude, loc.accuracy); })
+      .then(id => { if (watchId === "pending") watchId = id; else BG.removeWatcher({id}); }).catch(() => { watchId = null; gpsErr = "Couldn't start location."; });
+    return; }
   if (!navigator.geolocation){ gpsErr = "This browser has no location support."; return; }
   watchId = navigator.geolocation.watchPosition(pos => {
     gpsErr = ""; const moved = dist(me, {lat:pos.coords.latitude, lng:pos.coords.longitude});
@@ -724,13 +736,13 @@ function startGPS(){
     gpsErr = err.code === 1 ? "Location is blocked. Allow location for this site in your browser settings, then reload." : "Waiting for a GPS signal…";
   }, {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
 }
-function stopGPS(){ if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; } }
+function stopGPS(){ if (watchId == null) return; if (BG){ if (watchId !== "pending") BG.removeWatcher({id:watchId}).catch(() => {}); } else navigator.geolocation.clearWatch(watchId); watchId = null; }
 let wake = null;
 async function keepAwake(){ try { if (navigator.wakeLock && document.visibilityState === "visible") wake = await navigator.wakeLock.request("screen"); } catch(e){} }
 document.addEventListener("visibilitychange", () => {          // phone locked, a call came in, or the player switched apps
-  me.away = document.visibilityState !== "visible";
+  me.away = document.visibilityState !== "visible" && !BG;        // the iPhone app keeps tracking while locked, so it never counts as asleep
   if (!cfg || !N.client) return;
-  if (!me.away){ me.outSince = null; if (cfg.phase === "live") keepAwake(); if (!test && watchId != null){ stopGPS(); startGPS(); } }
+  if (!me.away){ me.outSince = null; if (cfg.phase === "live") keepAwake(); if (!test && !BG && watchId != null){ stopGPS(); startGPS(); } }
   pubMe(); if (!me.away) tick();
 });
 

@@ -1,0 +1,6 @@
+{
+  "appId": "io.github.sergioi1.zonehunt",
+  "appName": "Zone Hunt",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "backgroundColor": "#111613" }
+}
