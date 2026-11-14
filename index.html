@@ -255,6 +255,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .ticon{width:42px;height:42px;border-radius:50%;border:3px solid var(--tc);background:var(--surface);font-size:19px;padding:0}
 .trow .text{max-width:none;padding:9px 12px}
 .tcount{font-size:13px;color:var(--muted);white-space:nowrap}
+.qrbox{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.qrbox #qr{width:132px;height:132px;flex:none;background:#fff;border-radius:8px;padding:6px}
+.qrbox #qr svg{width:100%;height:100%;display:block}
+.qrbox p{margin:0;font-size:14px;color:var(--muted)}
+.qrbox b{color:var(--ink)}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -285,8 +290,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <input class="text" id="nameIn" maxlength="16" autocomplete="off" placeholder="What should friends see?">
       </div>
       <button class="big" id="createBtn" type="button">Create a game</button>
-      <div class="or">or join one</div>
-      <div class="joinrow">
+      <button class="ghost" id="ownBtn" type="button" hidden>Create my own game instead</button>
+      <div class="or" id="orRow">or join one</div>
+      <div class="joinrow" id="joinRow">
         <input class="text" id="codeIn" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code">
         <button class="ghost" id="joinBtn" type="button">Join</button>
       </div>
@@ -301,8 +307,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
           <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
           <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
+          <li>QR code in the lobby: scan it to join without typing the game code.</li>
           <li>Teams: split hiders into 2 to 4 teams with their own colors, names and icons.</li>
-          <li>Name swap can now target anyone, and there's a new Disguise power-up.</li>
+          <li>Disguise power-up: make any hider look like any other player, even a seeker.</li>
           <li>Photo icons: take a picture in the lobby and it replaces your dot on the map.</li>
           <li>Tap a power-up under Advanced settings to watch an example of it.</li>
           <li>Phone screen examples for tagging, getting tagged and using a power-up.</li>
@@ -321,6 +328,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <span class="sp"></span>
         <button class="ghost" id="shareBtn" type="button">Share invite</button>
         <button class="ghost" id="leaveBtn" type="button">Leave</button>
+      </div>
+
+      <div class="qrbox" id="qrBox" hidden>
+        <div id="qr" role="img" aria-label="QR code that opens this game"></div>
+        <p><b>Scan to join.</b> Point a phone camera at this code. It opens the game with the code already filled in, so they only type their name.</p>
       </div>
 
       <section class="sec">
@@ -504,6 +516,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 <div class="reveal" id="reveal" hidden><div><small id="revSmall">You are a</small><strong id="revRole"></strong><span id="revTip"></span></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (() => {
 "use strict";
@@ -534,8 +547,7 @@ const ITEMS = {
   ghost: {icon:"👻", name:"Ghost",      desc:"You vanish from the map and from pings."},
   rat:   {icon:"🐀", name:"Rat",        desc:"Pick a teammate. Seekers see them live. Not in Manhunt."},
   decoy: {icon:"📍", name:"Decoy",      desc:"Tap the map to drop a fake ping with any name."},
-  swap:  {icon:"🎭", name:"Name swap",  desc:"Pick any hider, you or someone else, and choose the name seekers will see on them for the rest of the round."},
-  mask:  {icon:"🥸", name:"Disguise",   desc:"Pick any hider, you or someone else. Seekers see them as a seeker and can't use Tag on them."}
+  mask:  {icon:"🥸", name:"Disguise",   desc:"Pick any hider, you or someone else, then pick who seekers should think they are. Choose a seeker and they look like that seeker, and Tag won't work on them."}
 };
 const TEAM_COL = ["#2F6FE4", "#12A37A", "#C034D6", "#D9A21B"];
 const TEAM_DEF = [{name:"Astro", icon:"🚀"}, {name:"Smoke", icon:"💨"}, {name:"Flare", icon:"🔥"}, {name:"Comet", icon:"☄️"}];
@@ -570,7 +582,8 @@ const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
             pings:[], log:[], liveSince:0,
             rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), masks:new Map(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, thawTarget:null, shChoices:[] };
-const dn = p => (me.role === "seeker" && p.role === "hider" && p.alias) ? p.alias : p.name;   // name swap fools seekers only
+const maskOn = id => { const k = G.masks.get(id); return !!k && k.until > Date.now(); };          // disguised as a seeker right now
+const dn = p => me.role !== "seeker" || p.role !== "hider" ? p.name : maskOn(p.id) && G.masks.get(p.id).name ? G.masks.get(p.id).name : p.alias || p.name;   // name swap fools seekers only
 if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
 function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null,
@@ -658,7 +671,8 @@ function onEvent(m){
     case "team": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.team = m.team | 0; pubMe(); } break;
     case "alias": if (m.id === me.id && me.role === "hider" && me.st === "active"){ me.alias = String(m.name || "").slice(0, 16); if (me.alias === me.name) me.alias = ""; pubMe();
         toast(m.from === me.id ? "Seekers now see you as " + (me.alias || me.name) : nameOf(m.from) + " changed your name to " + (me.alias || me.name)); } break;
-    case "mask": G.masks.set(m.id, m.until); if (m.id === me.id) toast("You look like a seeker for " + cfg.pdur + " s"); break;
+    case "mask": G.masks.set(m.id, {until:m.until, name:String(m.name || "").slice(0, 16)});
+      if (m.id === me.id) toast("Seekers think you're " + (m.name || "a seeker") + " for " + cfg.pdur + " s"); break;
     case "needava": if (m.id === me.id) sendAva(); break;
     case "ava": if (m.from === m.id && m.id !== me.id && okImg(m.img)){ avatars.set(m.id, m.img); avaKey.set(m.id, String(m.av || "")); renderLobby(true); } break;
     case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
@@ -763,6 +777,7 @@ function leave(){
   code = null; cfg = null; players.clear(); me.lat = me.lng = null; me.st = "active"; me.role = "hider";
   store.del("zh-session", sessionStorage); store.set("zh-session", {id:me.id}, sessionStorage);
   try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+  setInvite(null); homeMsg("");
   show("home");
 }
 
@@ -841,6 +856,10 @@ function renderLobby(force){
   if (!cfg || cfg.phase !== "lobby") return;
   const host = isHost(), now = Date.now();
   $("#codeOut").textContent = code;
+  const qb = $("#qrBox");
+  if (qb.dataset.code !== code){ qb.dataset.code = code; qb.hidden = true;
+    try { if (window.qrcode){ const q = qrcode(0, "M"); q.addData(location.origin + location.pathname + location.search + "#" + code); q.make();
+      $("#qr").innerHTML = q.createSvgTag({cellSize:4, margin:0, scalable:true}); qb.hidden = false; } } catch(e){} }
   $("#settings").disabled = !host;
   for (const [sid, oid, key, f] of SL){ const el = $("#" + sid); if (document.activeElement !== el || !host) el.value = cfg[key]; $("#" + oid).textContent = f(cfg[key]); }
   const r = $("#mode-" + cfg.mode); if (r) r.checked = true;
@@ -977,9 +996,10 @@ const PUDEMOS = {                            // one tiny scene per power-up
   swap: u => ({z:[150, 80, 70], ping: u >= .4 && u < .7 ? ((u - .4)/.3*2) % 1 : -1,
     note: u < .25 ? "John puts on Jacob's name" : u < .4 ? "Now seekers see him as Jacob" : u < .7 ? "Ping! Sam's map shows two Jacobs" : "Sam can't tell who is who",
     ents:[["John","h",[[0,105,58]],{label: u < .25 ? "John 🎭" : "Jacob"}], ["Jacob","h",[[0,198,62]]], ["Sam","s",[[0,150,95]]]]}),
-  mask: u => { const on = u >= .3 && u < .85;
-    return {z:[150, 80, 70], note: u < .3 ? "Seeker's map: Sam spots John" : on ? "John uses Disguise. He looks like a seeker" : "The disguise wears off",
-      ents:[["John", on ? "s" : "h", [[0,118,66],[.3,118,66],[.85,152,120]]], ["Sam","s",[[0,182,102],[.3,142,80],[.6,104,58]]]]}; }
+  mask: u => { const sk = u >= .55 && u < .92;
+    return {z:[150, 80, 70], ping: u >= .22 && u < .42 ? (u - .22)/.2 : -1,
+      note: u < .12 ? "John disguises himself as Jacob" : u < .45 ? "Ping! Sam's map shows two Jacobs" : u < .55 ? "Next, John picks Sam the seeker" : sk ? "Now John looks like a second Sam" : "The seeker disguise wears off",
+      ents:[["John", sk ? "s" : "h", [[0,105,58],[.55,105,58],[.92,140,112]], {label: u < .12 ? "John 🥸" : sk ? "Sam" : "Jacob"}], ["Jacob","h",[[0,198,62]]], ["Sam","s",[[0,160,100],[.55,160,100],[.92,112,62]]]]}; }
 };
 let puSel = "life", puT0 = performance.now();
 function drawScene(cv, d, u){
@@ -1073,7 +1093,7 @@ function zoneAt(t){
 function canSee(p){
   if (cfg.mode === "sardines" && p.id !== me.id && me.role === "seeker" && p.role === "seeker" && me.st === "active" && !G.over) return false;   // or a vanishing seeker would give the spot away
   if (p.id === me.id || G.over || (me.st !== "active" && me.st !== "frozen") || p.st !== "active" || p.role === me.role) return true;
-  if (p.role === "hider" && me.role === "seeker" && G.masks.get(p.id) > Date.now()) return true;      // disguised: shows up as a fellow seeker
+  if (p.role === "hider" && me.role === "seeker" && maskOn(p.id)) return true;      // disguised: shows up as a fellow seeker
   if (p.role === "hider" && p.ghost > Date.now()) return false;
   if (!G.hunt) return p.role === "seeker";
   if (p.role === "hider" && G.rats.get(p.id) > Date.now()) return true;
@@ -1083,7 +1103,7 @@ function canSee(p){
   return d <= sight() || dist(p, G.zi.cur) > G.zi.cur.r;
 }
 function nearestOf(role){ let best = null, bd = Infinity; const now = Date.now();
-  for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE || (p.role !== me.role && p.ghost > now) || (role === "hider" && me.role === "seeker" && G.masks.get(p.id) > now)) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
+  for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE || (p.role !== me.role && p.ghost > now) || (role === "hider" && me.role === "seeker" && maskOn(p.id))) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
   return best ? {p:best, d:bd} : null; }
 const canBeHit = () => cfg && cfg.phase === "live" && me.role === "hider" && me.st === "active" && G.hunt;
 function loseLife(by){                       // a seeker's Tag button: costs one life, then you get escape time
@@ -1210,7 +1230,7 @@ function tick(){
       if (G.lastPingIdx == null) G.lastPingIdx = idx;
       else if (idx > G.lastPingIdx){
         G.lastPingIdx = idx;
-        for (const p of players.values()) if (p.role === "hider" && p.st === "active" && p.lat != null && p.id !== me.id && !(p.ghost > now) && !(G.masks.get(p.id) > now)) G.pings.push({lat:p.lat, lng:p.lng, name: cfg.pingNames ? (p.alias || p.name) : "", until: now + PING_SHOW*1000, id:p.id + idx});
+        for (const p of players.values()) if (p.role === "hider" && p.st === "active" && p.lat != null && p.id !== me.id && !(p.ghost > now) && !(maskOn(p.id))) G.pings.push({lat:p.lat, lng:p.lng, name: cfg.pingNames ? (p.alias || p.name) : "", until: now + PING_SHOW*1000, id:p.id + idx});
         addLog("Ping! Every hider's spot just flashed on the seekers' map.");
         toast(me.role === "hider" && me.st === "active" ? "Ping! Seekers saw your spot" : "Ping! Hiders revealed");
       }
@@ -1281,7 +1301,7 @@ function hud(t, end){
   const isig = hid ? me.inv.join() : "-";
   if (isig !== invSig){ invSig = isig; $("#inv").innerHTML = hid ? me.inv.map((k, i) => '<button class="pu" type="button" data-i="' + i + '">' + ITEMS[k].icon + " " + ITEMS[k].name + "</button>").join("") : ""; }
   $("#buffs").textContent = [teamsOn() && me.role === "hider" && !over ? tinfo(me.team % cfg.nTeams).icon + " Team " + tinfo(me.team % cfg.nTeams).name : "",
-                             hid && G.masks.get(me.id) > nowH ? "🥸 Disguised " + fmt((G.masks.get(me.id) - nowH)/1000) : "", hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.alias ? "🎭 Seekers see you as " + me.alias : "",
+                             hid && maskOn(me.id) ? "🥸 Disguised as " + (G.masks.get(me.id).name || "a seeker") + " " + fmt((G.masks.get(me.id).until - nowH)/1000) : "", hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.alias ? "🥸 Seekers see you as " + me.alias : "",
                              hid && G.rats.get(me.id) > nowH ? "🐀 Exposed " + fmt((G.rats.get(me.id) - nowH)/1000) : ""].filter(Boolean).join(" · ");
   const fzn = hid && cfg.mode === "freeze" ? nearestFrozen() : null, th = $("#thawBtn");
   G.thawTarget = fzn; th.hidden = !fzn; if (fzn) th.textContent = "Unfreeze " + fzn.name;
@@ -1332,7 +1352,7 @@ function renderMap(){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     const rp = G.replay ? trackAt(p.id, G.replay.t) : null; if (G.replay && !rp) continue;
     seen.add(p.id);
-    const idle = !!p.away || now - p.seen > STALE, masked = !lobby && p.role === "hider" && p.st === "active" && G.masks.get(p.id) > now && me.role === "seeker" && me.st === "active" && !G.over,
+    const idle = !!p.away || now - p.seen > STALE, masked = !lobby && p.role === "hider" && p.st === "active" && maskOn(p.id) && me.role === "seeker" && me.st === "active" && !G.over,
           role = lobby && cfg.randomRoles ? "hider" : masked ? "seeker" : p.role, tc = !masked && showTeam(p) && !(lobby && cfg.randomRoles) ? TEAM_COL[teamOf(p)] : "",
           pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, avaKey.get(p.id) || "", tc, tc ? tinfo(teamOf(p)).icon : ""].join("|");
     let m = markers.get(p.id);
@@ -1363,7 +1383,12 @@ function renderMap(){
 }
 
 /* ---------------- buttons ---------------- */
-$("#createBtn").addEventListener("click", createGame);
+let invite = null;                           // set when the page was opened from a QR code or invite link
+function setInvite(c){ invite = c; $("#createBtn").textContent = c ? "Join game " + c : "Create a game"; $("#ownBtn").hidden = !c; $("#orRow").hidden = !!c; $("#joinRow").hidden = !!c;
+  if (c) homeMsg("You've been invited to game " + c + ". Type your name and tap Join."); }
+$("#createBtn").addEventListener("click", () => invite ? joinGame(invite) : createGame());
+$("#ownBtn").addEventListener("click", () => { setInvite(null); homeMsg(""); });
+$("#nameIn").addEventListener("keydown", e => { if (e.key === "Enter" && invite) joinGame(invite); });
 $("#joinBtn").addEventListener("click", () => joinGame());
 $("#codeIn").addEventListener("keydown", e => { if (e.key === "Enter") joinGame(); });
 $("#leaveBtn").addEventListener("click", leave);
@@ -1419,14 +1444,15 @@ $("#inv").addEventListener("click", async e => {
     const hs = otherPlayers().filter(p => p.role === "hider" && p.st === "active"); if (!hs.length) return toast("Nobody to rat out");
     const c = await sheet("Rat out which hider?", hs.map(p => p.name)), target = hs.find(p => p.name === c);
     if (target){ ev({t:"rat", id:target.id, until: Date.now() + cfg.pdur*1000}); spend(k); toast("You ratted out " + target.name); } }
-  else if (k === "swap" || k === "mask"){
+  else if (k === "mask"){                    // one power-up: make any hider look like any other player
     const hs = otherPlayers().filter(p => p.role === "hider" && p.st === "active");
-    const who = await sheet(k === "swap" ? "Whose name should change?" : "Who gets the disguise?", ["Me"].concat(hs.map(p => p.name)));
+    const who = await sheet("Who gets the disguise?", ["Me"].concat(hs.map(p => p.name)));
     if (!who || !me.inv.includes(k)) return; const target = who === "Me" ? me : hs.find(p => p.name === who); if (!target) return;
-    if (k === "mask"){ ev({t:"mask", id:target.id, until: Date.now() + cfg.pdur*1000}); spend(k); if (target !== me) toast(target.name + " looks like a seeker for " + cfg.pdur + " s"); return; }
-    const nm = await sheet("What name should seekers see on " + (target === me ? "you" : target.name) + "?", [...new Set([...players.values()].map(p => p.name))]);
-    if (!nm || !me.inv.includes(k)) return;
-    ev({t:"alias", id:target.id, name:nm}); spend(k); if (target !== me) toast("Seekers now see " + target.name + " as " + nm); }
+    const pool = [...players.values()].filter(p => p.id !== target.id), labels = pool.map(p => p.name + (p.role === "seeker" ? " (seeker)" : " (hider)"));
+    const pick = await sheet("Who should seekers think " + (target === me ? "you are" : target.name + " is") + "?", labels), as = pool[labels.indexOf(pick)];
+    if (!as || !me.inv.includes(k)) return;
+    if (as.role === "seeker") ev({t:"mask", id:target.id, until: Date.now() + cfg.pdur*1000, name:as.name}); else ev({t:"alias", id:target.id, name:as.name});
+    spend(k); if (target !== me) toast("Seekers now think " + target.name + " is " + as.name); }
   else if (k === "decoy"){ G.armed = true; follow = false; toast("Tap the map where the fake ping goes"); }
 });
 async function placeDecoy(ll){
@@ -1470,7 +1496,7 @@ requestAnimationFrame(drawDemo);
 $("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " each game mode to see how it works.";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
-if (/^[A-Z0-9]{6}$/.test(hashCode)) $("#codeIn").value = hashCode;
+if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.code !== hashCode) setInvite(hashCode); }
 if (QS.has("test")) $("#testChk").checked = true;
 setInterval(tick, 500);
 if (saved.code && $("#nameIn").value){ me.name = $("#nameIn").value; test = !!saved.test; $("#testChk").checked = test; joinGame(saved.code, true); }
