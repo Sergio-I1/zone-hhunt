@@ -25,6 +25,7 @@ The whole app is `index.html`. No build step and no server to set up.
 - Caught hiders drop any power-ups they were holding.
 - Animated example of each game mode in the lobby.
 - QR code in the lobby for joining without typing the code.
+- Optional Google Sheet tracker for visits and games per mode (see TRACKER-SETUP.md).
 - Teams for hiders (colors, names, icons), and a Disguise power-up that makes any hider look like any other player.
 - Photo icons, animated power-up examples, and phone screen examples for tagging, getting tagged and power-ups.
 - Results page with your stats, everyone's stats, a catch map and a time-lapse replay.
