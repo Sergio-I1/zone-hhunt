@@ -51,4 +51,4 @@ Email: (Google requires one; it is shown publicly. A new address just for the ap
 ## Graphics
 - App icon: icon-512.png in this repo
 - Feature graphic (1024 x 500): store/feature-graphic.png
-- Phone screenshots: store/screenshot-*.png
+- Phone screenshots (1080 x 1920): store/screenshot-1-lobby.png, store/screenshot-2-modes.png, store/screenshot-3-screens.png
