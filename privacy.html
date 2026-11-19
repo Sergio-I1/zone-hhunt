@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zone Hunt Privacy Policy</title>
+<style>
+:root{--bg:#EDF0EA;--surface:#fff;--ink:#18211C;--muted:#5D6A62;--line:#D2D9D1;--accent:#1E6A49}
+@media (prefers-color-scheme: dark){:root{--bg:#111613;--surface:#1A211C;--ink:#E6ECE7;--muted:#93A199;--line:#2C3730;--accent:#43B783;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:68ch;margin:0 auto;padding:32px 20px 60px}
+h1{font-size:30px;line-height:1.15;margin:0 0 4px}
+h2{font-size:19px;margin:32px 0 6px}
+p,li{color:var(--ink)} .muted{color:var(--muted)}
+ul{padding-left:22px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin-top:8px}
+th,td{text-align:left;padding:8px 10px 8px 0;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.wrap{overflow-x:auto}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>Zone Hunt Privacy Policy</h1>
+<p class="muted">Last updated: November 19, 2026</p>
+
+<p>Zone Hunt is a hide-and-seek game played outside with friends. It uses your phone's location so the players in your game can see each other on a map. This page explains what the app uses, who can see it, and what is kept.</p>
+
+<h2>The short version</h2>
+<ul>
+<li>Your location is shared only with the people in the same game as you, and only while you are in that game.</li>
+<li>The developer does not store your location, your name or your photo.</li>
+<li>There are no ads, no accounts and no selling of data.</li>
+</ul>
+
+<h2>What the app uses</h2>
+<div class="wrap"><table>
+<tr><th>What</th><th>Why</th><th>Who sees it</th><th>How long it is kept</th></tr>
+<tr><td>Your location</td><td>To show you on the game map and run the game (zone, tagging, pings)</td><td>Only the players in your game</td><td>Not stored by the developer. Players' phones keep it until the game's results page is closed, for the replay.</td></tr>
+<tr><td>The name you type</td><td>So other players know who is who</td><td>Only the players in your game</td><td>Saved only on your own phone, so you don't have to retype it</td></tr>
+<tr><td>Your photo (optional)</td><td>To replace your dot on the map if you choose to take one</td><td>Only the players in your game</td><td>Saved only on your own phone until you remove it</td></tr>
+<tr><td>Usage counts</td><td>To count how many people open the app and which game modes are played</td><td>Only the developer</td><td>Kept in the developer's Google Sheet</td></tr>
+</table></div>
+
+<p>The usage counts contain only: whether it was a visit or a game start, the game mode, the number of players, a random device code made by the app, whether it was the browser or the app, and whether it was a phone or a computer. They never contain your name, location or photo.</p>
+
+<h2>How game messages travel</h2>
+<p>Phones in a game talk to each other through a public message relay (EMQX or HiveMQ). Every message is encrypted with a key made from your game's code, so the relay and anyone without the code cannot read where players are. The relay does not keep messages after they are delivered.</p>
+
+<h2>Other services the app loads from</h2>
+<ul>
+<li><b>OpenStreetMap</b> supplies the map images. It sees your device's internet address and which part of the map you are viewing.</li>
+<li><b>Google Fonts</b> and <b>unpkg</b> supply fonts and code libraries on the website version.</li>
+<li><b>Google Apps Script</b> receives the usage counts described above.</li>
+</ul>
+
+<h2>Location while your phone is locked</h2>
+<p>The iPhone app can keep sharing your location with your game while the phone is locked, if you choose "Always" when it asks. It stops when you leave the game. The website and Android app share location only while the game is on screen.</p>
+
+<h2>Children</h2>
+<p>Zone Hunt is not made for children under 13 and does not knowingly collect information from them.</p>
+
+<h2>Your choices</h2>
+<ul>
+<li>You can turn location off for the app at any time in your phone's settings. The game will not work without it.</li>
+<li>You can remove your photo in the lobby with "Use the plain peg."</li>
+<li>Clearing the app's storage or uninstalling it removes your saved name, photo and device code from your phone.</li>
+</ul>
+
+<h2>Changes</h2>
+<p>If this policy changes, the new version will be posted on this page with a new date.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy: open an issue at <a href="https://github.com/Sergio-I1/zone-hhunt/issues">github.com/Sergio-I1/zone-hhunt/issues</a>.</p>
+</main>
+</body>
+</html>
