@@ -1,0 +1,33 @@
+# Checks the 4 Apple secrets without printing them. Run: Actions -> "Check Apple key" -> Run workflow.
+name: Check Apple key
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - run: pip install --quiet pyjwt cryptography requests
+      - name: Check the values and ask Apple
+        shell: python
+        run: |
+          import os, re, time, jwt, requests
+          team, kid, iss, p8 = (os.environ.get(k, "") for k in ("TEAM_ID", "KEY_ID", "ISSUER_ID", "KEY_P8"))
+          print("Team ID looks right:", bool(re.fullmatch(r"[A-Z0-9]{10}", team.strip())), "| has spaces around it:", team != team.strip())
+          print("Key ID looks right:", bool(re.fullmatch(r"[A-Z0-9]{10}", kid.strip())), "| has spaces around it:", kid != kid.strip())
+          print("Issuer ID looks right:", bool(re.fullmatch(r"[0-9a-f-]{36}", iss.strip())), "| has spaces around it:", iss != iss.strip())
+          lines = p8.strip().splitlines()
+          print("Key file: lines =", len(lines), "| starts with BEGIN:", p8.strip().startswith("-----BEGIN PRIVATE KEY-----"),
+                "| ends with END:", p8.strip().endswith("-----END PRIVATE KEY-----"), "| characters =", len(p8.strip()))
+          try:
+              token = jwt.encode({"iss": iss.strip(), "iat": int(time.time()), "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"},
+                                 p8.strip() + "\n", algorithm="ES256", headers={"kid": kid.strip(), "typ": "JWT"})
+              r = requests.get("https://api.appstoreconnect.apple.com/v1/apps?limit=5", headers={"Authorization": "Bearer " + token}, timeout=30)
+              print("Apple answered:", r.status_code)
+              if r.ok: print("Apps on the account:", [a["attributes"]["bundleId"] for a in r.json().get("data", [])])
+              else: print("Apple says:", [e.get("detail") for e in r.json().get("errors", [])])
+          except Exception as e:
+              print("Could not use the key:", type(e).__name__, str(e)[:200])
