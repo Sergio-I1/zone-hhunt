@@ -18,7 +18,11 @@ jobs:
         with: { node-version: 20 }
       - name: Check the secrets are set
         run: |
-          for v in TEAM_ID KEY_ID ISSUER_ID; do [ -n "${!v}" ] || { echo "Missing secret for $v. See IOS-SETUP.md"; exit 1; }; done
+          for v in TEAM_ID KEY_ID ISSUER_ID; do
+            clean=$(printf '%s' "${!v}" | tr -d '[:space:]')          # pasted values often carry a stray space or line break
+            [ -n "$clean" ] || { echo "Missing secret for $v. See IOS-SETUP.md"; exit 1; }
+            echo "$v=$clean" >> "$GITHUB_ENV"
+          done
       - run: npm install
       - name: Create the Xcode project
         run: npm run ios:prepare
