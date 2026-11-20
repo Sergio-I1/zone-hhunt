@@ -28,6 +28,16 @@ jobs:
               r = requests.get("https://api.appstoreconnect.apple.com/v1/apps?limit=5", headers={"Authorization": "Bearer " + token}, timeout=30)
               print("Apple answered:", r.status_code)
               if r.ok: print("Apps on the account:", [a["attributes"]["bundleId"] for a in r.json().get("data", [])])
+              if r.ok:
+                  H = {"Authorization": "Bearer " + token}
+                  b = requests.get("https://api.appstoreconnect.apple.com/v1/builds?limit=5&sort=-uploadedDate", headers=H, timeout=30).json()
+                  for x in b.get("data", []):
+                      at = x["attributes"]; print("Build", at.get("version"), "| state:", at.get("processingState"), "| expired:", at.get("expired"), "| uploaded:", at.get("uploadedDate"))
+                  g = requests.get("https://api.appstoreconnect.apple.com/v1/betaGroups?include=betaTesters&limit=10", headers=H, timeout=30).json()
+                  for x in g.get("data", []):
+                      at = x["attributes"]; n = len(x.get("relationships", {}).get("betaTesters", {}).get("data", []) or [])
+                      print("Tester group:", at.get("name"), "| internal:", at.get("isInternalGroup"), "| auto-add builds:", at.get("hasAccessToAllBuilds"), "| testers:", n)
+                  if not g.get("data"): print("Tester group: none yet")
               else: print("Apple says:", [e.get("detail") for e in r.json().get("errors", [])])
           except Exception as e:
               print("Could not use the key:", type(e).__name__, str(e)[:200])
