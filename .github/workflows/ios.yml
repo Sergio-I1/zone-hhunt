@@ -1,46 +1,61 @@
 # Builds the iPhone app on a rented Mac and sends it to TestFlight.
 # Run it by hand: GitHub -> Actions -> "iPhone build" -> Run workflow.
 # Needs four repository secrets. IOS-SETUP.md explains where each one comes from.
+#
+# Signing is done with Codemagic's free command-line tools, which make an App Store certificate and
+# profile through the App Store Connect API. No Mac or registered device is needed. Each run removes the
+# account's older iOS distribution certificates first, because Apple allows only a few at a time.
+# Apps already on TestFlight or the App Store are not affected by that.
 name: iPhone build
 on: workflow_dispatch
 
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 50
     env:
-      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_KEY_P8 }}
+      RAW_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      RAW_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      RAW_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      BUNDLE_ID: io.github.sergioi1.zonehunt
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - name: Check the secrets are set
         run: |
-          for v in TEAM_ID KEY_ID ISSUER_ID; do
-            clean=$(printf '%s' "${!v}" | tr -d '[:space:]')          # pasted values often carry a stray space or line break
-            [ -n "$clean" ] || { echo "Missing secret for $v. See IOS-SETUP.md"; exit 1; }
-            echo "$v=$clean" >> "$GITHUB_ENV"
-          done
+          clean() { printf '%s' "$1" | tr -d '[:space:]'; }    # pasted values often carry a stray space or line break
+          T=$(clean "$RAW_TEAM_ID"); K=$(clean "$RAW_KEY_ID"); I=$(clean "$RAW_ISSUER_ID")
+          for v in "$T" "$K" "$I" "$APP_STORE_CONNECT_PRIVATE_KEY"; do [ -n "$v" ] || { echo "A secret is missing. See IOS-SETUP.md"; exit 1; }; done
+          { echo "TEAM_ID=$T"; echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$K"; echo "APP_STORE_CONNECT_ISSUER_ID=$I"; } >> "$GITHUB_ENV"
       - run: npm install
       - name: Create the Xcode project
         run: npm run ios:prepare
-      - name: Save the App Store Connect key
+      - name: Set version and build number
         run: |
-          mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = ${{ github.run_number }};/g; s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = 1.0;/g; s/DEVELOPMENT_TEAM = [^;]+;/DEVELOPMENT_TEAM = $TEAM_ID;/g" ios/App/App.xcodeproj/project.pbxproj
+      - name: Install the signing tools
+        run: pipx install codemagic-cli-tools
+      - name: Make the App Store certificate and profile
+        run: |
+          keychain initialize
+          openssl genrsa -out "$RUNNER_TEMP/cert_key.pem" 2048
+          app-store-connect certificates list --type IOS_DISTRIBUTION DISTRIBUTION --json > "$RUNNER_TEMP/certs.json" || echo "[]" > "$RUNNER_TEMP/certs.json"
+          python3 -c "import json,sys; [print(c['id']) for c in json.load(open(sys.argv[1]))]" "$RUNNER_TEMP/certs.json" | while read -r id; do
+            app-store-connect certificates delete "$id" --ignore-not-found
+          done
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --platform IOS --type IOS_APP_STORE \
+            --certificate-key "@file:$RUNNER_TEMP/cert_key.pem" --create --delete-stale-profiles
+          keychain add-certificates
+          xcode-project use-profiles --project ios/App/App.xcodeproj
       - name: Build
-        run: |
-          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
-            -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
-            MARKETING_VERSION=3.0 CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+        run: xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
       - name: Send to TestFlight
-        run: |
-          python3 -c "import plistlib,sys; plistlib.dump({'method':'app-store-connect','destination':'upload','signingStyle':'automatic','teamID':sys.argv[1]}, open(sys.argv[2],'wb'))" "$TEAM_ID" "$RUNNER_TEMP/export.plist"
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
-            -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+        run: app-store-connect publish --path build/ios/ipa/*.ipa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iphone-build-${{ github.run_number }}
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: ignore
