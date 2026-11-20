@@ -79,7 +79,7 @@ function buildDashboard_(sh) {
 
   const totals = [
     ["Website visits", '=COUNTIFS(Events!B:B,"visit")'],
-    ["Different devices", '=IFERROR(COUNTUNIQUE(FILTER(Events!E2:E,Events!B2:B="visit")),0)'],
+    ["Different devices", '=IF(B4=0,0,COUNTUNIQUE(FILTER(Events!E2:E,Events!B2:B="visit")))'],
     ["Games started", '=COUNTIFS(Events!B:B,"start",' + notTest + ')'],
     ["Visits, last 7 days", '=COUNTIFS(Events!B:B,"visit",Events!A:A,">="&(TODAY()-6))'],
     ["Games, last 7 days", '=COUNTIFS(Events!B:B,"start",Events!A:A,">="&(TODAY()-6),' + notTest + ')'],
