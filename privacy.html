@@ -40,6 +40,7 @@ a{color:var(--accent)}
 <tr><td>Your location</td><td>To show you on the game map and run the game (zone, tagging, pings)</td><td>Only the players in your game</td><td>Not stored by the developer. Players' phones keep it until the game's results page is closed, for the replay.</td></tr>
 <tr><td>The name you type</td><td>So other players know who is who</td><td>Only the players in your game</td><td>Saved only on your own phone, so you don't have to retype it</td></tr>
 <tr><td>Your photo (optional)</td><td>To replace your dot on the map if you choose to take one</td><td>Only the players in your game</td><td>Saved only on your own phone until you remove it</td></tr>
+<tr><td>Purchase status</td><td>To know if you bought the full unlock, so your games get every mode</td><td>Apple or Google, and RevenueCat, which checks purchases for the app</td><td>As long as your store account has the purchase. Payments are handled by Apple or Google; the app never sees your card.</td></tr>
 <tr><td>Usage counts</td><td>To count how many people open the app and which game modes are played</td><td>Only the developer</td><td>Kept in the developer's Google Sheet</td></tr>
 </table></div>
 
@@ -53,6 +54,7 @@ a{color:var(--accent)}
 <li><b>OpenStreetMap</b> supplies the map images. It sees your device's internet address and which part of the map you are viewing.</li>
 <li><b>Google Fonts</b> and <b>unpkg</b> supply fonts and code libraries on the website version.</li>
 <li><b>Google Apps Script</b> receives the usage counts described above.</li>
+<li><b>RevenueCat</b> checks whether you bought the full unlock. It receives a random app user code and your purchase status, not your name or location.</li>
 </ul>
 
 <h2>Location while your phone is locked</h2>

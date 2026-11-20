@@ -260,6 +260,17 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .qrbox #qr svg{width:100%;height:100%;display:block}
 .qrbox p{margin:0;font-size:14px;color:var(--muted)}
 .qrbox b{color:var(--ink)}
+.mode .lockb{display:none;margin-left:8px;font:700 11px var(--font-body);letter-spacing:.04em;text-transform:none;color:var(--zone);vertical-align:middle}
+.mode.locked .lockb{display:inline}
+.mode.locked strong,.mode.locked span{opacity:.75}
+.unlockrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.unlockrow .msg{flex:1;min-width:200px;margin:0}
+.paywall{position:fixed;inset:0;z-index:2500;display:grid;place-items:center;padding:16px;background:rgba(10,14,12,.6)}
+.pwcard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:380px;width:100%;display:grid;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.pwcard h2{margin:0;font-family:var(--font-display);font-weight:900;font-size:34px;line-height:.95;text-transform:uppercase;color:var(--zone)}
+.pwcard .pwprice{margin:0;font-size:15px;color:var(--muted)}
+.pwcard .pwprice b{font-family:var(--font-mono);font-size:26px;color:var(--ink)}
+.pwcard ul{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14.5px}
 /* map markers */
 .pm{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;pointer-events:none}
 .pm i{display:block;width:16px;height:16px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -307,6 +318,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
           <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
           <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
+          <li>Classic and Manhunt are free. A one-time unlock in the app adds 4 more modes and power-ups, and only the host needs it.</li>
           <li>QR code in the lobby: scan it to join without typing the game code.</li>
           <li>Teams: split hiders into 2 to 4 teams with their own colors, names and icons.</li>
           <li>Disguise power-up: make any hider look like any other player, even a seeker.</li>
@@ -368,6 +380,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
+          <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
           <p class="msg" id="demoHint"></p>
           <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
             <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button><button type="button" data-t="pow" aria-pressed="false">Using a power-up</button></div>
@@ -514,6 +527,23 @@ input[type=range]{width:100%;accent-color:var(--zone)}
   </section>
 </div>
 
+<div class="paywall" id="paywall" hidden role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+  <div class="pwcard">
+    <h2 id="pwTitle">Unlock every mode</h2>
+    <p class="pwprice"><b id="pwPrice">$2.99</b> one time</p>
+    <ul>
+      <li>Infection, Last Zone Standing, Freeze Tag and Sardines</li>
+      <li>Power-ups on the map</li>
+      <li>Only the host needs it. Everyone in your games gets it too, for free.</li>
+    </ul>
+    <p class="msg" id="pwMsg"></p>
+    <div class="endbtns">
+      <button class="act go" type="button" id="pwBuy">Unlock for $2.99</button>
+      <button class="ghost" type="button" id="pwRestore">Restore purchase</button>
+      <button class="ghost" type="button" id="pwClose">Not now</button>
+    </div>
+  </div>
+</div>
 <div class="reveal" id="reveal" hidden><div><small id="revSmall">You are a</small><strong id="revRole"></strong><span id="revTip"></span></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
@@ -772,7 +802,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, powerups:true, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, premium, powerups:premium, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -855,8 +885,12 @@ function buildLobbyControls(){
   const box = $("#modes");
   for (const [k, m] of Object.entries(MODES)){
     const l = document.createElement("label"); l.className = "mode";
-    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + "</strong><span>" + esc(m.blurb) + "</span>";
-    l.querySelector("input").addEventListener("change", () => isHost() && hostSet({mode:k}));
+    l.dataset.k = k;
+    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒 Unlock</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.querySelector("input").addEventListener("change", e => {
+      if (!isHost()) return;
+      if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; return openPaywall(MODES[k].name); }
+      hostSet({mode:k}); });
     const pick = () => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); } };
     l.addEventListener("pointerenter", pick); l.addEventListener("click", pick);
     l.addEventListener("pointerleave", e => { if (e.pointerType === "mouse"){ demoMode = null; demoT0 = performance.now(); } });
@@ -868,7 +902,10 @@ function buildLobbyControls(){
     if (key === "startR" && cfg.endR >= patch.startR) patch.endR = Math.max(15, patch.startR - 25);
     hostSet(patch);
   });
-  for (const [cid, key] of CK) $("#" + cid).addEventListener("change", e => isHost() && hostSet({[key]: e.target.checked}));
+  for (const [cid, key] of CK) $("#" + cid).addEventListener("change", e => {
+    if (!isHost()) return;
+    if (key === "powerups" && e.target.checked && !cfg.premium){ e.target.checked = false; return openPaywall("Power-ups"); }
+    hostSet({[key]: e.target.checked}); });
 }
 let rosterSig = "";
 function renderLobby(force){
@@ -931,6 +968,10 @@ function renderLobby(force){
         '</button><input class="text" id="tname' + i + '" data-i="' + i + '" maxlength="12" aria-label="Name of team ' + (i + 1) + '" value="' + esc(tinfo(i).name) + '"' + (host ? "" : " disabled") + '><span class="tcount">' + (rnd ? "random" : n + (n === 1 ? " hider" : " hiders")) + "</span></div>"); } }
   const sard = cfg.mode === "sardines";
   $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
+  for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("locked", !modeOk(l.dataset.k));
+  $("#premiumNote").textContent = cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
+    : host ? "Free: Classic and Manhunt. The full unlock adds 4 modes and power-ups for everyone in your game." : "";
+  $("#unlockBtn").hidden = !host || !!cfg.premium;
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
   let why = "";
   if (!cfg.center) why = "Waiting for your GPS so the zone can be placed.";
@@ -941,6 +982,41 @@ function renderLobby(force){
   sm.className = "msg" + (host && why ? " err" : "");
   sm.textContent = host ? (why || "Everyone should be at the center pin when you start.") : "Waiting for the host to start the game.";
 }
+/* ---------------- full unlock ($2.99, host only) ---------------- */
+// The host buys once in the app. Their games then unlock every mode and power-ups for everyone in them.
+// Purchases go through RevenueCat, which talks to the App Store and Google Play.
+const FREE_MODES = ["classic", "manhunt"];
+const RC_KEYS = {ios: "", android: ""};      // RevenueCat public app keys (PURCHASES-SETUP.md)
+const ENTITLEMENT = "premium";
+const modeOk = k => FREE_MODES.includes(k) || !!(cfg && cfg.premium);
+let premium = NATIVE && store.get("zh-premium") === true, RC = null, rcReady = false, rcPkg = null;
+const hasEnt = r => { const ci = (r && r.customerInfo) || r || {}; return !!(ci.entitlements && ci.entitlements.active && ci.entitlements.active[ENTITLEMENT]); };
+function setPremium(v){
+  premium = !!v; store.set("zh-premium", premium);
+  if (cfg && isHost() && cfg.phase === "lobby" && !!cfg.premium !== premium) hostSet(premium ? {premium} : {premium, powerups:false, mode: FREE_MODES.includes(cfg.mode) ? cfg.mode : "classic"});
+  renderLobby(true);
+}
+async function initPurchases(){
+  if (!NATIVE || !RC_KEYS[PLATFORM]) return;
+  try {
+    RC = Capacitor.registerPlugin("Purchases"); await RC.configure({apiKey: RC_KEYS[PLATFORM]}); rcReady = true;
+    setPremium(hasEnt(await RC.getCustomerInfo()));
+    const o = await RC.getOfferings(), cur = o && (o.current || (o.all && Object.values(o.all)[0]));
+    rcPkg = cur && cur.availablePackages && cur.availablePackages[0] || null;
+    if (rcPkg && rcPkg.product && rcPkg.product.priceString){ $("#pwPrice").textContent = rcPkg.product.priceString; $("#unlockBtn").textContent = "Unlock all modes · " + rcPkg.product.priceString; }
+  } catch(e){}
+}
+function openPaywall(what){
+  const msg = $("#pwMsg"), buy = $("#pwBuy"), rest = $("#pwRestore");
+  $("#pwTitle").textContent = what ? what + " is in the full unlock" : "Unlock every mode";
+  buy.textContent = "Unlock for " + $("#pwPrice").textContent; buy.disabled = false;
+  if (!NATIVE){ msg.textContent = "The unlock is in the Zone Hunt app for iPhone and Android. Host your game from the app and everyone can join from here."; buy.hidden = rest.hidden = true; }
+  else if (!rcReady){ msg.textContent = "Purchases aren't switched on in this version of the app yet."; buy.hidden = rest.hidden = true; }
+  else { msg.textContent = ""; buy.hidden = rest.hidden = false; }
+  $("#paywall").hidden = false; $("#pwClose").focus();
+}
+const closePaywall = () => { $("#paywall").hidden = true; };
+
 /* ---------------- usage tracker (Google Sheet) ---------------- */
 // Paste the Apps Script web app link between the quotes. Empty means nothing is sent.
 // Only sends: visit or game start, the mode, how many players, and a random device id. No names, no locations.
@@ -956,6 +1032,10 @@ function track(type, extra){
 
 function startGame(){
   if (!isHost() || !cfg.center) return;
+  if (!cfg.premium){                          // the free version can't start a locked mode or use power-ups
+    if (!modeOk(cfg.mode)) return openPaywall(MODES[cfg.mode].name);
+    if (cfg.powerups) hostSet({powerups:false}, true);
+  }
   const s = cfg.shrinks, zones = [{...cfg.center, r:cfg.startR}];
   for (let k = 1; k <= s; k++){
     const prev = zones[k-1], r = Math.round(cfg.startR - (cfg.startR - cfg.endR)*k/s);
@@ -1520,6 +1600,24 @@ $("#teamList").addEventListener("click", e => { const b = e.target.closest(".tic
   setTeamInfo(i, {icon: TEAM_ICONS[(TEAM_ICONS.indexOf(tinfo(i).icon) + 1) % TEAM_ICONS.length]}); });
 $("#teamList").addEventListener("change", e => { const inp = e.target.closest("input"); if (!inp || !isHost()) return; const i = +inp.dataset.i;
   inp.blur(); setTeamInfo(i, {name: inp.value.trim().slice(0, 12) || TEAM_DEF[i].name}); });
+$("#unlockBtn").addEventListener("click", () => openPaywall(""));
+$("#pwClose").addEventListener("click", closePaywall);
+$("#paywall").addEventListener("click", e => { if (e.target.id === "paywall") closePaywall(); });
+$("#pwBuy").addEventListener("click", async () => {
+  const msg = $("#pwMsg"), b = $("#pwBuy");
+  if (!rcPkg){ msg.textContent = "Couldn't load the price. Check your connection and try again."; return; }
+  b.disabled = true; msg.textContent = "Opening the store…";
+  try { const ok = hasEnt(await RC.purchasePackage({aPackage: rcPkg})); setPremium(ok);
+    msg.textContent = ok ? "Unlocked. Every mode and power-ups are on for the games you host." : "The purchase didn't go through.";
+    if (ok) setTimeout(closePaywall, 1600); }
+  catch(e){ msg.textContent = e && (e.userCancelled || e.code === "1" || /cancel/i.test(e.message || "")) ? "" : "The purchase didn't go through."; }
+  b.disabled = false;
+});
+$("#pwRestore").addEventListener("click", async () => {
+  const msg = $("#pwMsg"); msg.textContent = "Checking…";
+  try { const ok = hasEnt(await RC.restorePurchases()); setPremium(ok); msg.textContent = ok ? "Restored. The full unlock is on." : "No purchase found on this store account."; if (ok) setTimeout(closePaywall, 1600); }
+  catch(e){ msg.textContent = "Couldn't reach the store. Try again."; }
+});
 $("#avaBtn").addEventListener("click", () => $("#avaIn").click());
 $("#avaClear").addEventListener("click", () => setMyAva(""));
 $("#avaIn").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -1533,6 +1631,7 @@ if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.co
 if (QS.has("test")) $("#testChk").checked = true;
 setInterval(tick, 500);
 track("visit");
+initPurchases();
 if (saved.code && $("#nameIn").value){ me.name = $("#nameIn").value; test = !!saved.test; $("#testChk").checked = test; joinGame(saved.code, true); }
 })();
 </script>

@@ -35,6 +35,9 @@ MORE
 - Results at the end: who lasted longest, where everyone was caught, and a time-lapse replay of the whole game
 - Every timing is adjustable
 
+FREE AND FULL
+Classic and Manhunt are free. A one-time $2.99 unlock adds Infection, Last Zone Standing, Freeze Tag, Sardines and power-ups. Only the host needs it: everyone in their games plays with the full unlock for free.
+
 Your location is shared only with the players in your game, and messages are encrypted with your game's code. No accounts, no ads.
 
 ## Category
