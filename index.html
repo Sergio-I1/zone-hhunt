@@ -262,6 +262,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .qrbox b{color:var(--ink)}
 .mode .lockb{display:none;margin-left:8px;font:700 11px var(--font-body);letter-spacing:.04em;text-transform:none;color:var(--zone);vertical-align:middle}
 .mode.locked .lockb{display:inline}
+.powlock{display:inline!important;margin-left:8px;font:700 11px var(--font-body);letter-spacing:.04em;text-transform:none;color:var(--zone);vertical-align:middle;font-style:normal}.powlock[hidden]{display:none!important}
 .mode.locked strong,.mode.locked span{opacity:.75}
 .unlockrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .unlockrow .msg{flex:1;min-width:200px;margin:0}
@@ -411,7 +412,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags a hider can take. "I got caught" always ends it at once.</small></div>
           </div>
-          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b> Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
+          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b><em class="lockb powlock" hidden>🔒 Unlock</em> Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
         </section>
         <details class="adv">
           <summary>Advanced settings</summary>
@@ -431,7 +432,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               </div>
               <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
             </section>
-            <section class="sec" id="powAdv"><h3>Power-ups</h3>
+            <section class="sec" id="powAdv"><h3>Power-ups<em class="lockb powlock" hidden>🔒 Unlock</em></h3>
               <div class="sliders">
                 <div class="slider"><div class="top"><label class="lbl" for="sPlim">Power-up limit</label><output id="oPlim"></output></div><input type="range" id="sPlim" min="1" max="10" step="1"><small>Total in play: on the map plus held by hiders. When one is used, a new one appears.</small></div>
                 <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div>
@@ -564,8 +565,8 @@ const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const SIGHT0 = 30, PICK_R = 12, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000;
 const MODES = {
   classic:  {name:"Classic",            blurb:"Seekers hunt, caught hiders are out. Hiders' spots ping on the map every few minutes."},
-  infection:{name:"Infection",          blurb:"Every caught hider turns into a seeker. The hunt snowballs."},
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
+  infection:{name:"Infection",          blurb:"Every caught hider turns into a seeker. The hunt snowballs."},
   zone:     {name:"Last Zone Standing", blurb:"The zone never stops closing. Hiders outside it for 30 s are eliminated."},
   freeze:   {name:"Freeze Tag",         blurb:"Caught hiders freeze in place. A free hider can unfreeze them by getting close and typing the code on their screen.",
              how:"To unfreeze someone, you must be close enough (inside the tag range), read the code off their phone, and type it on your own phone."},
@@ -921,7 +922,8 @@ function renderLobby(force){
   const r = $("#mode-" + cfg.mode); if (r) r.checked = true;
   const noPing = cfg.mode === "manhunt"; $("#pingWrap").classList.toggle("off", noPing); $("#sPing").disabled = noPing;
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
-  $("#powAdv").classList.toggle("off", !cfg.powerups); $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
+  $("#powAdv").classList.toggle("off", !cfg.powerups); for (const id of ["sPlim", "sPdur", "cStack"]) $("#" + id).disabled = !host || !cfg.powerups;
+  for (const el of document.querySelectorAll(".powlock")) el.hidden = !!cfg.premium; $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
   setMock();
   const rnd = !!cfg.randomRoles;
