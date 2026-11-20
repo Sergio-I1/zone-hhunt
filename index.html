@@ -713,7 +713,13 @@ function onEvent(m){
 /* ---------------- location ---------------- */
 let watchId = null, gpsErr = "";
 const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());   // true inside the iPhone app, false on the website
+const PLATFORM = NATIVE && Capacitor.getPlatform ? Capacitor.getPlatform() : "web";    // "ios", "android" or "web"
 let BG = null; try { if (NATIVE) BG = Capacitor.registerPlugin("BackgroundGeolocation"); } catch(e){}
+let notifAsked = false;
+function askNotifications(){      // Android 13+ shows the "sharing your location" notice only with this permission
+  if (PLATFORM !== "android" || notifAsked) return; notifAsked = true;
+  try { Capacitor.registerPlugin("LocalNotifications").requestPermissions().catch(() => {}); } catch(e){}
+}
 function onFix(lat, lng, acc){
   gpsErr = ""; const moved = dist(me, {lat, lng}); me.lat = lat; me.lng = lng; me.acc = acc;
   if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
@@ -722,7 +728,7 @@ function onFix(lat, lng, acc){
 function startGPS(){
   if (test){ const c = (cfg && cfg.center) || {lat:29.8884, lng:-97.9384}; const p = offset(c, (Math.random()-.5)*30, (Math.random()-.5)*30); me.lat = p.lat; me.lng = p.lng; me.acc = 3; return; }
   if (watchId != null) return;
-  if (BG){ watchId = "pending";
+  if (BG){ watchId = "pending"; askNotifications();
     BG.addWatcher({backgroundTitle:"Zone Hunt game in progress", backgroundMessage:"Sharing your location with your game.", requestPermissions:true, stale:false, distanceFilter:2},
       (loc, err) => { if (err){ gpsErr = err.code === "NOT_AUTHORIZED" ? "Location is off for Zone Hunt. Turn it on in Settings, set to Always." : "Waiting for a GPS signal…"; return; } if (loc) onFix(loc.latitude, loc.longitude, loc.accuracy); })
       .then(id => { if (watchId === "pending") watchId = id; else BG.removeWatcher({id}); }).catch(() => { watchId = null; gpsErr = "Couldn't start location."; });
@@ -942,7 +948,7 @@ const TRACK_URL = "";
 const trackId = (() => { let v = store.get("zh-visitor"); if (!/^[a-z0-9]{6,16}$/.test(v || "")){ v = Math.random().toString(36).slice(2, 12).padEnd(8, "0"); store.set("zh-visitor", v); } return v; })();
 function track(type, extra){
   if (!TRACK_URL || (!NATIVE && location.protocol !== "https:")) return;           // skip local testing
-  const place = NATIVE ? "iPhone app" : matchMedia("(display-mode: standalone)").matches ? "Home screen app" : "Browser";
+  const place = PLATFORM === "ios" ? "iPhone app" : PLATFORM === "android" ? "Android app" : matchMedia("(display-mode: standalone)").matches ? "Home screen app" : "Browser";
   const device = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "phone" : "computer";
   try { fetch(TRACK_URL, {method:"POST", mode:"no-cors", keepalive:true, headers:{"Content-Type":"text/plain"},
     body: JSON.stringify({type, visitor:trackId, place, device, ...extra})}).catch(() => {}); } catch(e){}

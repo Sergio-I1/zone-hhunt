@@ -7,7 +7,7 @@
  */
 
 const MODES = ["Classic", "Infection", "Manhunt", "Last Zone Standing", "Freeze Tag", "Sardines"];
-const PLACES = ["Browser", "Home screen app", "iPhone app"];
+const PLACES = ["Browser", "Home screen app", "iPhone app", "Android app"];
 
 // The website sends one small message here for each visit and each game started.
 function doPost(e) {
