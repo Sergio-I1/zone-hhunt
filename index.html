@@ -231,6 +231,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .act.thaw{background:var(--hider)}
 .jam{inset:0;z-index:1150;display:grid;place-items:center;padding:20px;background:repeating-linear-gradient(45deg,#18211c,#18211c 12px,#232e27 12px,#232e27 24px);color:#fff;font-family:var(--font-display);font-weight:900;font-size:34px;text-transform:uppercase;text-align:center}
 .sheet{inset:auto 0 0 0;z-index:1300;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right)) 16px max(16px,env(safe-area-inset-left));display:grid;gap:12px;box-shadow:0 -10px 30px rgba(0,0,0,.3);max-height:80%;overflow:auto}
+.sheet.floating{position:fixed;z-index:3200;padding-bottom:max(16px,env(safe-area-inset-bottom))}
 .sheet h3{margin:0;font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase}
 .sheet .choices{display:flex;flex-wrap:wrap;gap:8px}
 .check b{color:var(--ink)}
@@ -823,6 +824,8 @@ function onEvent(m){
         toast(m.from === me.id ? "Seekers now see you as " + (me.alias || me.name) : nameOf(m.from) + " changed your name to " + (me.alias || me.name)); } break;
     case "mask": G.masks.set(m.id, {until:m.until, name:String(m.name || "").slice(0, 16)});
       if (m.id === me.id) toast("Seekers think you're " + (m.name || "a seeker") + " for " + cfg.pdur + " s"); break;
+    case "tinfo": if (isHost() && cfg.phase === "lobby"){ const p = players.get(m.from), icon = oneEmoji(m.icon);
+        if (p && p.role === "hider" && teamOf(p) === m.i && icon) setTeamInfo(m.i, {icon}); } break;
     case "needava": if (m.id === me.id) sendAva(); break;
     case "ava": if (m.from === m.id && m.id !== me.id && okImg(m.img)){ avatars.set(m.id, m.img); avaKey.set(m.id, String(m.av || "")); renderLobby(true); } break;
     case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
@@ -1091,7 +1094,7 @@ function renderLobby(force){
   const tl = $("#teamList"), tsig = host + "|" + cfg.nTeams + JSON.stringify(cfg.teamInfo || 0) + fresh.map(p => p.role + (p.tm | 0)).join("");
   if (cfg.teams && tl.dataset.sig !== tsig && !tl.contains(document.activeElement)){ tl.dataset.sig = tsig; tl.innerHTML = "";
     for (let i = 0; i < cfg.nTeams; i++){ const n = fresh.filter(p => p.role === "hider" && teamOf(p) === i).length;
-      tl.insertAdjacentHTML("beforeend", '<div class="trow"><button class="ticon" type="button" data-i="' + i + '" style="--tc:' + TEAM_COL[i] + '" aria-label="Change icon for team ' + (i + 1) + '"' + (host ? "" : " disabled") + ">" + esc(tinfo(i).icon) +
+      tl.insertAdjacentHTML("beforeend", '<div class="trow"><button class="ticon" type="button" data-i="' + i + '" style="--tc:' + TEAM_COL[i] + '" aria-label="Change icon for team ' + (i + 1) + '"' + (host || (me.role === "hider" && teamOf(me) === i && !rnd) ? "" : " disabled") + ">" + esc(tinfo(i).icon) +
         '</button><input class="text" id="tname' + i + '" data-i="' + i + '" maxlength="12" aria-label="Name of team ' + (i + 1) + '" value="' + esc(tinfo(i).name) + '"' + (host ? "" : " disabled") + '><span class="tcount">' + (rnd ? "random" : n + (n === 1 ? " hider" : " hiders")) + "</span></div>"); } }
   const sard = cfg.mode === "sardines";
   $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
@@ -1743,10 +1746,13 @@ function sheet(title, choices, input){
     $("#shChoices").innerHTML = G.shChoices.map((c, i) => '<button class="ghost" type="button" data-i="' + i + '">' + esc(c) + "</button>").join("");
     const inp = $("#shInput"); inp.hidden = !input; $("#shOk").hidden = !input;
     if (input){ inp.value = input.value || ""; inp.placeholder = input.placeholder || ""; inp.maxLength = input.max || 16; inp.inputMode = input.numeric ? "numeric" : "text"; }
-    $("#sheet").hidden = false; if (input) inp.focus(); });
+    const sh = $("#sheet"), lobbyUse = $("#game").hidden; sh.classList.toggle("floating", lobbyUse);   // in the lobby the game screen is hidden, so float it over the page
+    if (!G.shHome) G.shHome = sh.parentNode;
+    if (lobbyUse && sh.parentNode !== document.body) document.body.appendChild(sh); else if (!lobbyUse && sh.parentNode === document.body) G.shHome.appendChild(sh);
+    G.shQuick = !!(input && input.quick); sh.hidden = false; if (input && !input.quick) inp.focus(); });
 }
 function closeSheet(v){ $("#sheet").hidden = true; const r = shRes; shRes = null; if (r) r(v); }
-$("#shChoices").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const c = G.shChoices[+b.dataset.i]; if ($("#shInput").hidden) closeSheet(c); else $("#shInput").value = c; });
+$("#shChoices").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const c = G.shChoices[+b.dataset.i]; if ($("#shInput").hidden || G.shQuick) closeSheet(c); else $("#shInput").value = c; });
 $("#shOk").addEventListener("click", () => closeSheet($("#shInput").value.trim()));
 $("#shInput").addEventListener("keydown", e => { if (e.key === "Enter") closeSheet($("#shInput").value.trim()); });
 $("#shCancel").addEventListener("click", () => closeSheet(null));
@@ -1931,8 +1937,13 @@ $("#puList").addEventListener("keydown", e => { if (e.key === "Enter" || e.key =
 $("#puHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a power-up to see it in action. Untick any you don't want in this game.";
 $("#mockTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMock(b.dataset.t); });
 const setTeamInfo = (i, patch) => { const ti = [0, 1, 2, 3].map(j => ({...tinfo(j)})); Object.assign(ti[i], patch); hostSet({teamInfo: ti}); };
-$("#teamList").addEventListener("click", e => { const b = e.target.closest(".ticon"); if (!b || !isHost()) return; const i = +b.dataset.i;
-  setTeamInfo(i, {icon: TEAM_ICONS[(TEAM_ICONS.indexOf(tinfo(i).icon) + 1) % TEAM_ICONS.length]}); });
+const oneEmoji = v => { v = String(v || "").trim(); if (!v) return "";      // keep just the first emoji someone typed or picked
+  let g = v; try { g = [...new Intl.Segmenter(undefined, {granularity:"grapheme"}).segment(v)][0].segment; } catch(e){ g = [...v][0]; }
+  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(g) ? g : ""; };
+$("#teamList").addEventListener("click", async e => { const b = e.target.closest(".ticon"); if (!b || b.disabled) return; const i = +b.dataset.i;
+  const v = await sheet("Pick an emoji for team " + tinfo(i).name, TEAM_ICONS, {value: "", placeholder:"Or type any emoji, then OK", quick:true, max:16});
+  const icon = oneEmoji(v); if (!icon){ if (v) toast("That's not an emoji"); return; }
+  if (isHost()) setTeamInfo(i, {icon}); else ev({t:"tinfo", i, icon}); });
 $("#teamList").addEventListener("change", e => { const inp = e.target.closest("input"); if (!inp || !isHost()) return; const i = +inp.dataset.i;
   inp.blur(); setTeamInfo(i, {name: inp.value.trim().slice(0, 12) || TEAM_DEF[i].name}); });
 $("#unlockBtn").addEventListener("click", () => openPaywall(""));
