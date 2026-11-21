@@ -159,13 +159,16 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
 @media (max-width:520px){.modes{grid-template-columns:1fr}}
 .mode{position:relative;display:grid;gap:4px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer}
 .modes{padding-left:30px}
-.mode input{position:absolute;left:-30px;top:50%;transform:translateY(-50%);margin:0;width:20px;height:20px;border-radius:50%;-webkit-appearance:none;appearance:none;border:2px solid var(--muted);background:var(--surface);cursor:pointer}
-.mode input:checked{border-color:var(--zone);background:radial-gradient(circle,var(--zone) 0 45%,var(--surface) 50%)}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.pvc{position:absolute;left:-31px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:2px solid var(--hider);background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.pvc::after{content:"";width:0;height:0;border-style:solid;border-width:4px 0 4px 7px;border-color:transparent transparent transparent var(--hider);margin-left:2px}
+.mode.pv .pvc{background:var(--hider)}.mode.pv .pvc::after{border-left-color:#fff}
+.modehead{display:flex;justify-content:space-between;align-items:end;gap:8px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.modehead b{color:var(--hider);white-space:nowrap;font-size:9.5px}
 .mode.pv:not(:has(input:checked)){border-style:dashed;border-color:var(--hider)}
-.mode{padding-right:34px!important}
-.pvb{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:9px;color:var(--hider);background:color-mix(in srgb,var(--hider) 14%,transparent)}
-.mode.pv .pvb{background:var(--hider);color:#fff}
-fieldset[disabled] .mode input{cursor:default}
+.modegrid .modehead{margin-left:-2px}
+
+
 .mode strong{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
 .mode span{font-size:13.5px;color:var(--muted)}
 .mode:has(input:checked){border-color:var(--zone);box-shadow:0 0 0 3px color-mix(in srgb,var(--zone) 18%,transparent)}
@@ -269,7 +272,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid .mode{padding:10px 32px 10px 10px!important;gap:0;min-height:48px;align-content:center;text-align:left}.modegrid .modes{padding-left:28px}.modegrid .mode input{left:-28px;width:20px;height:20px}
+  .modegrid .mode{padding:10px!important;gap:0;min-height:48px;align-content:center;text-align:left}.modegrid .modes{padding-left:28px}
   .modegrid .mode strong{font-size:18px!important;overflow-wrap:anywhere}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
   #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
@@ -503,7 +506,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <fieldset id="settings">
         <section class="sec"><h2>Mode</h2>
           <div class="modegrid">
-            <div class="modes" id="modes"></div>
+            <div><div class="modehead"><b>Preview</b><span>Tap a mode to play it</span></div><div class="modes" id="modes"></div></div>
             <div class="modeside">
               <div class="lbl" id="pvLbl">Preview</div>
             <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
@@ -1032,20 +1035,22 @@ function flashCard(small, big, cls, tip, wait, hold){          // full black scr
 const reveal = () => flashCard("You are a", me.role === "hider" ? "Hider" : "Seeker", me.role, (teamsOn() && me.role === "hider" ? tinfo(me.team % cfg.nTeams).icon + " Team " + tinfo(me.team % cfg.nTeams).name + " · " : "") + (me.role === "hider" ? "Go hide!" : "Wait at base until you're released."), 2000, 3200);
 function buildLobbyControls(){
   const box = $("#modes");
+  const setPv = k => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); }     // the circle on the left only previews
+    for (const t of box.children) t.classList.toggle("pv", t.dataset.k === (k || cfg.mode)); };
   for (const [k, m] of Object.entries(MODES)){
-    const l = document.createElement("div"); l.className = "mode";
+    const l = document.createElement("label"); l.className = "mode";       // the tile itself picks the mode (host)
     l.dataset.k = k;
-    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '" aria-label="Play ' + esc(m.name) + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + '</strong><b class="pvb" aria-hidden="true">▶</b><span>' + esc(m.blurb) + "</span>";
+    l.innerHTML = '<i class="pvc" role="button" tabindex="0" aria-label="Preview ' + esc(m.name) + '"></i><input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", e => {
       if (!isHost()) return;
-      if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; return openPaywall(MODES[k].name); }
-      hostSet({mode:k}); });
-    const pick = () => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); }       // tapping the tile only previews; the circle picks
-      for (const t of box.children) t.classList.toggle("pv", t === l); };
-    l.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") pick(); }); l.addEventListener("click", pick);
-    l.addEventListener("pointerleave", e => { if (e.pointerType === "mouse"){ demoMode = null; demoT0 = performance.now(); l.classList.remove("pv"); } });
+      if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; setPv(k); return openPaywall(MODES[k].name); }
+      setPv(k); hostSet({mode:k}); });
+    const pc = l.querySelector(".pvc"), prev = e => { e.preventDefault(); e.stopPropagation(); setPv(k); };
+    pc.addEventListener("click", prev); pc.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") prev(e); });
+    l.addEventListener("click", e => { if (!isHost() && !e.target.closest(".pvc")) setPv(k); });   // players who can't pick still see it
     box.append(l);
   }
+  setTimeout(() => cfg && setPv(null), 0);
   for (const [sid, , key] of SL) $("#" + sid).addEventListener("input", e => {
     if (!isHost()) return; const patch = {[key]: +e.target.value};
     if (key === "endR" && patch.endR >= cfg.startR) patch.endR = Math.max(15, cfg.startR - 25);
@@ -1130,6 +1135,7 @@ function renderLobby(force){
   const sard = cfg.mode === "sardines";
   $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("locked", !modeOk(l.dataset.k));
+  for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("pv", l.dataset.k === (DEMOS[demoMode] ? demoMode : cfg.mode));
   $("#premiumNote").textContent = cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
     : host ? "Free: Classic and Manhunt. The full unlock adds 4 modes and power-ups for everyone in your game." : "";
   $("#unlockBtn").hidden = !host || !!cfg.premium;
@@ -2039,7 +2045,7 @@ $("#avaIn").addEventListener("change", async e => { const f = e.target.files && 
   try { setMyAva(await shrinkPhoto(f)); } catch(err){ $("#avaMsg").textContent = "That photo didn't work. Try another one."; } });
 { const sv = store.get("zh-ava"); if (okImg(sv)){ me.ava = sv; me.av = "s" + sv.length.toString(36) + sv.slice(-6).replace(/[^A-Za-z0-9]/g, ""); avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } showMyAva(); }
 requestAnimationFrame(drawDemo);
-$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a mode (▶) to preview it. The host taps the circle ○ to pick it.";
+$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a ▶ circle to preview any mode, even locked ones. The host taps a mode itself to pick it.";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.code !== hashCode) setInvite(hashCode); }
