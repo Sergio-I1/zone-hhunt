@@ -138,7 +138,12 @@ button{cursor:pointer;touch-action:manipulation}
 
 .codebar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
 .codebar .code{font-family:var(--font-mono);font-weight:700;font-size:30px;letter-spacing:.14em;line-height:1}
-.codebar .sp{flex:1}
+.codebar{flex-wrap:nowrap;gap:14px}
+.qrwrap{display:grid;justify-items:center;gap:4px;flex:none}
+.qrwrap #qr{width:112px;height:112px;background:#fff;border-radius:8px;padding:6px}.qrwrap #qr svg{width:100%;height:100%;display:block}
+.qrwrap small{font-size:11px;font-weight:700;color:var(--muted)}
+.codeinfo{display:grid;gap:10px;min-width:0;flex:1}
+.codebtns{display:flex;gap:8px;flex-wrap:wrap}.codebtns .ghost{padding:9px 12px}
 .sec{display:grid;gap:12px}
 .sec h2{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sec h2 small{font-family:var(--font-body);font-weight:500;font-size:13px;letter-spacing:0;text-transform:none;color:var(--muted)}
@@ -472,15 +477,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
     <div class="inner">
       <div class="backrow step2"><button class="ghost" id="backBtn" type="button">← Back</button><b>Map &amp; settings</b></div>
       <div class="codebar step1">
-        <div><div class="lbl">Game code</div><div class="code" id="codeOut"></div></div>
-        <span class="sp"></span>
-        <button class="ghost" id="shareBtn" type="button">Share invite</button>
-        <button class="ghost" id="leaveBtn" type="button">Leave</button>
-      </div>
-
-      <div class="qrbox step1" id="qrBox" hidden>
-        <div id="qr" role="img" aria-label="QR code that opens this game"></div>
-        <p><b>Scan to join</b></p>
+        <div class="qrwrap" id="qrBox" hidden><div id="qr" role="img" aria-label="QR code that opens this game"></div><small>Scan to join</small></div>
+        <div class="codeinfo">
+          <div><div class="lbl">Game code</div><div class="code" id="codeOut"></div></div>
+          <div class="codebtns"><button class="ghost" id="shareBtn" type="button">Share invite</button><button class="ghost" id="leaveBtn" type="button">Leave</button></div>
+        </div>
       </div>
 
       <section class="sec step1">
@@ -1081,7 +1082,7 @@ function renderLobby(force){
   $("#codeOut").textContent = code;
   const qb = $("#qrBox");
   if (qb.dataset.code !== code){ qb.dataset.code = code; qb.hidden = true;
-    try { if (window.qrcode){ const q = qrcode(0, "M"); q.addData(location.origin + location.pathname + location.search + "#" + code); q.make();
+    try { if (window.qrcode){ const q = qrcode(0, "M"); q.addData((NATIVE ? "https://sergio-i1.github.io/zone-hhunt/" : location.origin + location.pathname + location.search) + "#" + code); q.make();
       $("#qr").innerHTML = q.createSvgTag({cellSize:4, margin:0, scalable:true}); qb.hidden = false; } } catch(e){} }
   $("#settings").disabled = !host;
   for (const [sid, oid, key, f] of SL){ const el = $("#" + sid); if (document.activeElement !== el || !host) el.value = cfg[key]; $("#" + oid).textContent = f(cfg[key]); }
@@ -1807,7 +1808,7 @@ $("#shuffleBtn").addEventListener("click", () => {
 });
 $("#centerBtn").addEventListener("click", () => { if (me.lat != null){ userMoved = false; G.zoneManual = false; hostSet({center:{lat:me.lat, lng:me.lng}}); } });
 $("#shareBtn").addEventListener("click", async () => {
-  const url = location.origin + location.pathname + location.search + "#" + code, text = "Join my Peekaboom game! Code: " + code;
+  const url = (NATIVE ? "https://sergio-i1.github.io/zone-hhunt/" : location.origin + location.pathname + location.search) + "#" + code, text = "Join my Peekaboom game! Code: " + code;
   try { if (navigator.share) return await navigator.share({title:"Peekaboom", text, url}); } catch(e){ return; }
   try { await navigator.clipboard.writeText(text + " " + url); $("#shareBtn").textContent = "Link copied"; } catch(e){ $("#shareBtn").textContent = code; }
   setTimeout(() => $("#shareBtn").textContent = "Share invite", 1800);
