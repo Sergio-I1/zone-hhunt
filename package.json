@@ -2,7 +2,7 @@
   "name": "zone-hunt",
   "version": "3.0.0",
   "private": true,
-  "description": "Zone Hunt: native iPhone and Android apps (Capacitor). The game itself is index.html.",
+  "description": "Peekaboom: native iPhone and Android apps (Capacitor). The game itself is index.html.",
   "scripts": {
     "www": "node scripts/build-www.mjs",
     "ios:prepare": "npm run www && npx cap add ios --packagemanager CocoaPods && npx capacitor-assets generate --ios && node scripts/patch-ios.mjs",

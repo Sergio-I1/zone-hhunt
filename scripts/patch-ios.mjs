@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 const plist = "ios/App/App/Info.plist";
 const pb = (...cmd) => { try { execFileSync("/usr/libexec/PlistBuddy", ["-c", cmd.join(" "), plist], { stdio: "pipe" }); } catch (e) { /* key already there */ } };
 const text = {
-  NSLocationWhenInUseUsageDescription: "Zone Hunt shows your position to the other players in your game.",
-  NSLocationAlwaysAndWhenInUseUsageDescription: "Zone Hunt keeps sharing your position with your game while your phone is locked, until the game ends.",
+  NSLocationWhenInUseUsageDescription: "Peekaboom shows your position to the other players in your game.",
+  NSLocationAlwaysAndWhenInUseUsageDescription: "Peekaboom keeps sharing your position with your game while your phone is locked, until the game ends.",
   NSCameraUsageDescription: "Take a photo to use as your icon on the game map.",
   NSPhotoLibraryUsageDescription: "Pick a photo to use as your icon on the game map."
 };

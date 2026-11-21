@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1E6A49">
-<title>Zone Hunt</title>
+<meta name="theme-color" content="#FF2E8B">
+<title>Peekaboom</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,18 +14,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
-  --bg:#EDF0EA; --surface:#FFFFFF; --surface-2:#F5F7F2; --ink:#18211C; --muted:#5D6A62; --line:#D2D9D1;
-  --accent:#1E6A49; --accent-ink:#FFFFFF;
-  --hider:#2563D6; --seeker:#DB4B22; --zone:#7B3FD0; --out:#8A938D;
+  --bg:#F3F1F7; --surface:#FFFFFF; --surface-2:#F8F6FB; --ink:#1B1726; --muted:#655E73; --line:#DDD7E7;
+  --accent:#F0217E; --accent-ink:#FFFFFF;
+  --hider:#1A7FF0; --seeker:#F0217E; --zone:#8445F0; --out:#8E889A;
   --font-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --radius:12px;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#111613; --surface:#1A211C; --surface-2:#151B17; --ink:#E6ECE7; --muted:#93A199; --line:#2C3730;
-  --accent:#43B783; --accent-ink:#0D1A13;
-  --hider:#6A9BFF; --seeker:#FF7A4D; --zone:#B48CFF; --out:#6C7670; color-scheme:dark}
+  --bg:#120F18; --surface:#1C1724; --surface-2:#17131E; --ink:#EFEBF5; --muted:#A49CB3; --line:#2F2839;
+  --accent:#FF4FA0; --accent-ink:#1A0611;
+  --hider:#4DA6FF; --seeker:#FF4FA0; --zone:#B38CFF; --out:#6F6880; color-scheme:dark}
   .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
 }
 *{box-sizing:border-box}
@@ -40,7 +40,7 @@ button{cursor:pointer;touch-action:manipulation}
 .page{flex:1;overflow-y:auto;padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
 .inner{max-width:640px;margin:0 auto;display:grid;gap:24px}
 .brand h1{font-family:var(--font-display);font-weight:900;font-size:clamp(56px,16vw,96px);line-height:.86;margin:0 0 8px;text-transform:uppercase}
-.brand h1 span{color:var(--zone)}
+.brand h1 span{color:var(--accent)}
 .brand p{margin:0;color:var(--muted);max-width:46ch}
 .field{display:grid;gap:6px}
 .lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -56,6 +56,67 @@ button{cursor:pointer;touch-action:manipulation}
 .msg.err{color:var(--seeker);font-weight:600}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
 .check input{margin-top:3px;accent-color:var(--accent)}
+/* frames: a ring drawn behind your dot or photo */
+.fr{position:absolute;inset:-6px;border-radius:50%;z-index:-1;pointer-events:none}
+.pm.you .fr{inset:-10px} .pm.pic .fr{inset:-7px}
+.fr-bubble{background:#FF6FB5}
+.fr-ocean{background:#1A7FF0}
+.fr-glow{background:#8CFF5A;box-shadow:0 0 10px #8CFF5A}
+.fr-gold{background:conic-gradient(#FFD54A,#B8860B,#FFF3B0,#B8860B,#FFD54A)}
+.fr-ice{background:linear-gradient(135deg,#F2FDFF,#7FDBFF 50%,#F2FDFF);box-shadow:0 0 8px #7FDBFF}
+.fr-flame{background:conic-gradient(#FF3D00,#FFB000,#FF3D00,#FF7A00,#FF3D00);box-shadow:0 0 12px #FF6A00}
+.fr-rainbow{background:conic-gradient(#FF3B3B,#FF9F1C,#FFE14D,#4CE06A,#2EC5FF,#5B5BFF,#D44DFF,#FF3B3B)}
+.fr-galaxy{background:radial-gradient(circle at 25% 30%,#fff 0 1px,transparent 2px),radial-gradient(circle at 72% 64%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 18%,#fff 0 1px,transparent 2px),linear-gradient(135deg,#2B0B5A,#7B2FF7,#0B1B5A);box-shadow:0 0 12px #7B2FF7}
+.fr-boom{background:conic-gradient(#1A8CFF,#FF2E8B,#1A8CFF);box-shadow:0 0 14px #FF2E8B;animation:frspin 2.4s linear infinite}
+@keyframes frspin{to{transform:rotate(360deg)}}
+.fav{position:relative;display:inline-grid;place-items:center;isolation:isolate}
+.fav .fr{inset:-4px}
+.crown{font-size:12px;margin-right:2px}
+/* frame shelf */
+.shelf{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.shelfbox{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;width:min(420px,100%);display:grid;gap:14px;box-shadow:0 16px 40px rgba(0,0,0,.3)}
+.shelfbox h3{margin:0;font-family:var(--font-display);font-weight:900;font-size:28px;text-transform:uppercase}
+.shelfgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ftile{display:grid;justify-items:center;gap:6px;padding:12px 4px 8px;border-radius:14px;border:2px solid var(--line);background:var(--surface-2);font-size:12px;font-weight:700;text-align:center;line-height:1.15}
+.ftile[aria-pressed="true"]{border-color:var(--accent)}
+.ftile small{font-weight:600;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.ftile.locked{opacity:.55}
+.fdot{width:34px;height:34px;border-radius:50%;background:var(--hider) center/cover;border:3px solid #fff;margin:6px}
+.ftile.locked .fdot{background:var(--line);display:grid;place-items:center;color:var(--muted);font-weight:900}
+.r-common{color:#6B8FA8} .r-rare{color:#1A7FF0} .r-epic{color:#8445F0} .r-legendary{color:#F0217E}
+/* prize machine */
+.gb{position:fixed;inset:0;z-index:3100;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.gbstage{position:relative;width:260px;height:330px}
+.gbtitle{position:absolute;left:0;right:0;top:-6px;text-align:center;margin:0;font-family:var(--font-display);font-weight:900;font-size:30px;text-transform:uppercase}
+.mach{position:absolute;left:40px;top:44px;width:180px;height:260px}
+.globe{position:absolute;left:10px;top:0;width:160px;height:160px;border-radius:50%;border:5px solid #fff;overflow:hidden;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.95),rgba(255,255,255,.25) 35%,rgba(170,200,255,.25));box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.globe span{position:absolute;width:30px;height:30px;border-radius:50%;box-shadow:inset -4px -4px 0 rgba(0,0,0,.15)}
+.mbody{position:absolute;left:22px;top:146px;width:136px;height:110px;border-radius:18px 18px 12px 12px;background:var(--accent);box-shadow:inset 0 -10px 0 rgba(0,0,0,.15)}
+.knob{position:absolute;left:46px;top:18px;width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+.knob::after{content:"";position:absolute;left:18px;top:3px;width:8px;height:38px;border-radius:4px;background:var(--hider)}
+.chute{position:absolute;left:50px;bottom:10px;width:36px;height:24px;border-radius:12px 12px 4px 4px;background:rgba(0,0,0,.35)}
+.ball{position:absolute;left:115px;top:262px;width:30px;height:30px;opacity:0;z-index:2;pointer-events:none}
+.mach,.boomfx{pointer-events:none}
+.prize{z-index:3}
+.ball i{position:absolute;left:0;width:30px;height:15px;background:var(--bc)}
+.ball i:first-child{top:0;border-radius:15px 15px 0 0;filter:brightness(1.25)}
+.ball i:last-child{top:15px;border-radius:0 0 15px 15px}
+.boomfx{position:absolute;left:130px;top:150px;width:10px;height:10px;border-radius:50%;opacity:0;background:radial-gradient(circle,#fff,var(--bc) 60%,transparent 70%)}
+.prize{position:absolute;inset:30px 0 0;display:grid;justify-items:center;align-content:center;gap:8px;text-align:center}
+.prize .fav{width:96px;height:96px}
+.prize .fav .fr{inset:-12px}
+.prize .bigdot{width:96px;height:96px;border-radius:50%;border:5px solid #fff;background:var(--hider) center/cover;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.prize strong{font-family:var(--font-display);font-weight:900;font-size:34px;text-transform:uppercase;line-height:1;margin-top:14px}
+.prize small{font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+.prize em{font-style:normal;font-size:13px;color:var(--muted)}
+.prize .endbtns{margin-top:6px}
+/* awards */
+.awards{display:grid;gap:8px}
+.aw{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);opacity:0;animation:awin .45s ease-out forwards}
+.aw>i{font-style:normal;font-size:26px;text-align:center}
+.aw b{display:block;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:.03em;text-transform:uppercase;line-height:1.05}
+.aw span{font-size:13px;color:var(--muted)} .aw span strong{color:var(--ink)}
+@keyframes awin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .puon{margin-left:auto;align-self:center;width:22px;height:22px;flex:none;accent-color:var(--accent)}
 #home{position:relative}
 #homeBg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
@@ -66,7 +127,7 @@ button{cursor:pointer;touch-action:manipulation}
 .homein .brand p{color:var(--ink);font-weight:600;text-shadow:0 1px 8px var(--bg),0 0 3px var(--bg)}
 .homecard{display:grid;gap:12px;padding:16px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 12px 36px rgba(0,0,0,.18)}
 .homecard .text{font-size:17px;padding:14px}
-.joinbig{width:auto;background:var(--seeker);color:#fff;font-size:22px;padding:12px 22px}
+.joinbig{width:auto;background:var(--hider);color:#fff;font-size:22px;padding:12px 22px}
 .more{justify-self:center;width:100%;font-size:13px;color:var(--muted)}
 .more>summary{cursor:pointer;text-align:center;font-weight:600;padding:6px;list-style:none;text-shadow:0 1px 6px var(--bg)}
 .more>summary::-webkit-details-marker{display:none}
@@ -304,6 +365,19 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 </style>
 </head>
 <body>
+<div class="shelf" id="shelf" hidden><div class="shelfbox" role="dialog" aria-label="Your frames">
+  <h3>Your frames <small class="msg" id="shelfCount"></small></h3>
+  <p class="msg">You win a random frame after every game. Collect all 9! Tap one to wear it.</p>
+  <div class="shelfgrid" id="shelfGrid"></div>
+  <div class="endbtns"><button class="ghost" type="button" id="frameNone">Wear no frame</button><button class="act go" type="button" id="shelfClose">Done</button></div>
+</div></div>
+<div class="gb" id="gumball" hidden><div class="gbstage" id="gbStage">
+  <p class="gbtitle" id="gbTitle">Prize time!</p>
+  <div class="mach" id="gbMach"><div class="globe" id="gbGlobe"></div><div class="mbody"><div class="knob" id="gbKnob"></div><div class="chute"></div></div></div>
+  <div class="ball" id="gbBall"><i></i><i></i></div>
+  <div class="boomfx" id="gbFx"></div>
+  <div class="prize" id="gbPrize" hidden></div>
+</div></div>
 <div id="app">
 
   <!-- HOME -->
@@ -311,8 +385,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
     <canvas id="homeBg" aria-hidden="true"></canvas>
     <div class="inner homein">
       <header class="brand">
-        <h1>Zone <span>Hunt</span></h1>
-        <p>Hide-and-seek on a live map.</p>
+        <h1>Peeka<span>boom</span></h1>
+        <p>Hide-and-seek on a live map. Boom, found you.</p>
       </header>
       <div class="homecard">
         <input class="text" id="nameIn" maxlength="16" autocomplete="off" placeholder="Your name" aria-label="Your name">
@@ -377,6 +451,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <span class="avaprev" id="avaPrev" aria-hidden="true"></span>
           <button class="ghost" type="button" id="avaBtn">Take a photo for my icon</button>
           <button class="ghost" type="button" id="avaClear" hidden>Use the plain peg</button>
+          <button class="ghost" type="button" id="frameBtn">🎁 Frames</button>
           <input type="file" id="avaIn" accept="image/*" capture="user" hidden>
         </div>
         <p class="msg" id="avaMsg">Optional. Your photo replaces your dot on the map. Only people in this game see it.</p>
@@ -513,6 +588,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <div class="endcard">
           <h2 id="endTitle"></h2>
           <p id="endSub"></p>
+          <h3>Awards</h3>
+          <div class="awards" id="awards"></div>
           <dl id="endStats"></dl>
           <h3>Your game</h3>
           <dl id="myStats"></dl>
@@ -575,7 +652,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 (() => {
 "use strict";
 /* ============================================================
-   Zone Hunt: multiplayer hide-and-seek.
+   Peekaboom (formerly Zone Hunt): multiplayer hide-and-seek.
    Phones talk through a free public message relay (MQTT). Every
    message is encrypted with a key made from the game code, so only
    people who have the code can read where players are.
@@ -634,7 +711,7 @@ let saved = store.get("zh-session", SS) || {};
 if (saved.code && saved.at && Date.now() - saved.at > 3*3600e3) saved = {id:saved.id};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
              lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
-             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0, walk:0, starUntil:0 };
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0, walk:0, starUntil:0, fr:"", cr:false };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
@@ -701,7 +778,7 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took, wk:Math.round(me.walk), star:me.starUntil};
+             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took, wk:Math.round(me.walk), star:me.starUntil, fr:me.fr, cr:me.cr};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
@@ -764,7 +841,7 @@ function onEvent(m){
     case "caught":
       rec(m.inf ? "infected" : m.fz ? "frozen" : "caught", m);
       addLog(m.by ? nameOf(m.by) + (m.inf ? " infected " : m.fz ? " froze " : " caught ") + nameOf(m.id) : nameOf(m.id) + (m.inf ? " got caught and turned seeker" : m.fz ? " is frozen" : " got caught"));
-      if (m.by === me.id){ me.tags++; pubMe(); toast("You got " + nameOf(m.id)); }
+      if (m.by === me.id){ me.tags++; pubMe(); toast("Boom! You got " + nameOf(m.id)); }
       break;
     case "found": rec("found", m); addLog(nameOf(m.id) + " found the hiding spot"); break;
     case "zoneout": rec("zoneout", m); addLog(nameOf(m.id) + " was eliminated by the zone"); break;
@@ -792,8 +869,8 @@ function startGPS(){
   if (test){ const c = (cfg && cfg.center) || {lat:29.8884, lng:-97.9384}; const p = offset(c, (Math.random()-.5)*30, (Math.random()-.5)*30); me.lat = p.lat; me.lng = p.lng; me.acc = 3; return; }
   if (watchId != null) return;
   if (BG){ watchId = "pending"; askNotifications();
-    BG.addWatcher({backgroundTitle:"Zone Hunt game in progress", backgroundMessage:"Sharing your location with your game.", requestPermissions:true, stale:false, distanceFilter:2},
-      (loc, err) => { if (err){ gpsErr = err.code === "NOT_AUTHORIZED" ? "Location is off for Zone Hunt. Turn it on in Settings, set to Always." : "Waiting for a GPS signal…"; return; } if (loc) onFix(loc.latitude, loc.longitude, loc.accuracy); })
+    BG.addWatcher({backgroundTitle:"Peekaboom game in progress", backgroundMessage:"Sharing your location with your game.", requestPermissions:true, stale:false, distanceFilter:2},
+      (loc, err) => { if (err){ gpsErr = err.code === "NOT_AUTHORIZED" ? "Location is off for Peekaboom. Turn it on in Settings, set to Always." : "Waiting for a GPS signal…"; return; } if (loc) onFix(loc.latitude, loc.longitude, loc.accuracy); })
       .then(id => { if (watchId === "pending") watchId = id; else BG.removeWatcher({id}); }).catch(() => { watchId = null; gpsErr = "Couldn't start location."; });
     return; }
   if (!navigator.geolocation){ gpsErr = "This browser has no location support."; return; }
@@ -977,7 +1054,7 @@ function renderLobby(force){
       const stale = now - p.seen > STALE, mine = p.id === me.id;
       const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
       const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
-      row.innerHTML = (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '<div class="pname">' + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      row.innerHTML = '<span class="fav">' + frU(p.fr) + (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '</span><div class="pname">' + (p.cr ? '<span class="crown" title="Won last game">👑</span>' : "") + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
       if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       if (tOn && p.role === "hider"){ const ti = teamOf(p), tb2 = document.createElement("button"); tb2.type = "button"; tb2.className = "tchip";
         tb2.style.setProperty("--tc", TEAM_COL[ti]); tb2.textContent = tinfo(ti).icon + " " + tinfo(ti).name; tb2.disabled = !(mine || host);
@@ -1045,7 +1122,7 @@ function openPaywall(what){
   const msg = $("#pwMsg"), buy = $("#pwBuy"), rest = $("#pwRestore");
   $("#pwTitle").textContent = what ? what + " is in the full unlock" : "Unlock every mode";
   buy.textContent = "Unlock for " + $("#pwPrice").textContent; buy.disabled = false;
-  if (!NATIVE){ msg.textContent = "The unlock is in the Zone Hunt app for iPhone and Android. Host your game from the app and everyone can join from here."; buy.hidden = rest.hidden = true; }
+  if (!NATIVE){ msg.textContent = "The unlock is in the Peekaboom app for iPhone and Android. Host your game from the app and everyone can join from here."; buy.hidden = rest.hidden = true; }
   else if (!rcReady){ msg.textContent = "Purchases aren't switched on in this version of the app yet."; buy.hidden = rest.hidden = true; }
   else { msg.textContent = ""; buy.hidden = rest.hidden = false; }
   $("#paywall").hidden = false; $("#pwClose").focus();
@@ -1334,6 +1411,30 @@ let toastT = 0;
 function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; el.style.opacity = 1; clearTimeout(toastT);
   toastT = setTimeout(() => { el.style.opacity = 0; toastT = setTimeout(() => el.hidden = true, 450); }, 2400); }
 
+function awardsFor(st, w){
+  const rows = st.rows; if (rows.length < 2) return [];
+  const H = G.hist, pl = id => players.get(id) || {}, out = [], nm = id => esc(nameOf(id)), top = (arr, f, min) => { let b = null, bv = min; for (const r of arr){ const v = f(r); if (v > bv){ bv = v; b = r; } } return b ? [b, bv] : null; };
+  const took = r => r.id === me.id ? me.took.length : (pl(r.id).took || []).length, hits = r => H.filter(h => h.k === "hit" && h.id === r.id).length;
+  const outAt = r => { const h = H.find(h => h.id === r.id && OUTK[h.k]); return h ? h.t : null; };
+  const add = (e, t, r, txt) => r && out.push('<div class="aw" style="animation-delay:' + (out.length*.12 + .2).toFixed(2) + 's"><i>' + e + "</i><div><b>" + t + "</b><span><strong>" + esc(r.name) + "</strong> · " + txt + "</span></div></div>");
+  let a;
+  if ((a = top(rows, r => r.wk || 0, 30))) add("🗺️", "Google Maps Intern", a[0], "walked the most, " + walkTxt(a[1]));
+  const sitters = rows.filter(r => r.start === "hider" && r.hid >= 90 && r.wk != null);
+  if (sitters.length && rows.some(r => r.wk > 30)){ const b = sitters.reduce((x, y) => (y.wk || 0) < (x.wk || 0) ? y : x); add("🗿", "Professional Statue", b, "barely moved: " + walkTxt(b.wk || 1)); }
+  if ((a = top(rows, r => r.tags, 0))) add("🎯", "Tag Machine", a[0], a[1] + " tag" + (a[1] === 1 ? "" : "s"));
+  if (cfg.mode !== "sardines" && (a = top(rows.filter(r => r.start === "hider"), r => r.hid, 0))) add("🕶️", "Witness Protection", a[0], "hid for " + fmt(a[1]));
+  const firstOut = rows.filter(r => outAt(r) != null).sort((x, y) => outAt(x) - outAt(y))[0];
+  if (firstOut) add("⚡", "Speedrun Any%", firstOut, "first one out, at " + fmt(outAt(firstOut)));
+  const fb = H.filter(h => h.by && (OUTK[h.k] || h.k === "hit"))[0]; if (fb) add("🐦", "Early Bird", rows.find(r => r.id === fb.by), "first tag of the game, at " + fmt(fb.t));
+  if ((a = top(rows, took, 0))) add("🛍️", "Shopaholic", a[0], "grabbed " + a[1] + " power-up" + (a[1] === 1 ? "" : "s"));
+  if ((a = top(rows.filter(r => r.free || cfg.mode === "freeze"), hits, 0))) add("🐈", "Nine Lives", a[0], "got tagged " + a[1] + "× and kept going");
+  if (w === "seekers"){ const last = rows.filter(r => outAt(r) != null).sort((x, y) => outAt(y) - outAt(x))[0]; if (last && last !== firstOut) add("👑", "Final Boss", last, "last hider standing, until " + fmt(outAt(last))); }
+  if ((a = top(rows, r => H.filter(h => h.k === "thawed" && h.by === r.id).length, 0))) add("🦸", "Ice Breaker", a[0], "unfroze " + a[1] + " teammate" + (a[1] === 1 ? "" : "s"));
+  const zo = H.find(h => h.k === "zoneout"); if (zo) add("🌀", "Zone? What Zone?", rows.find(r => r.id === zo.id), "got eaten by the zone");
+  const sf = rows.filter(r => r.found != null).sort((x, y) => x.found - y.found)[0]; if (sf) add("🐟", "Sardine Sniffer", sf, "found the hiding spot first");
+  return out.slice(0, 10);
+}
+function wonGame(r, w, lastS){ return w === "seekers" ? r.start === "seeker" : w === "hiders" ? (cfg.mode === "sardines" ? r.start === "hider" : r.free) : w === "packed" ? !(lastS && lastS.id === r.id) : false; }
 function showEnd(w){
   if (G.over && G.winner === w) return;
   G.over = true; G.winner = w;
@@ -1363,6 +1464,15 @@ function showEnd(w){
     '<tr><td><i class="mark ' + r.start + '"></i>' + esc(r.name) + "<small>Started as " + r.start + (r.tm != null ? " · " + esc(tinfo(r.tm).icon + " " + tinfo(r.tm).name) : "") + '</small></td><td class="num">' + (r.hid ? fmt(r.hid) : "–") + "</td><td>" + esc(r.what) + '</td><td class="num">' + r.tags + '</td><td class="num">' + walkTxt(r.wk) + "</td></tr>").join("");
   $("#replayBtn").hidden = !(cfg.replay && G.tracks.size);
   $("#mapBtn").hidden = !G.hist.some(h => h.lat != null && (OUTK[h.k] || h.k === "found"));
+  $("#awards").innerHTML = awardsFor(st, w).join("") || '<p class="msg">Play with more people to earn awards.</p>';
+  const gk = code + ":" + cfg.t0, won = wonGame(mine, w, lastS);
+  if (store.get("pb-last") !== gk){ store.set("pb-last", gk);
+    const hs = (store.get("pb-hist") || []).concat([{r:mine.start, w:won}]).slice(-60); store.set("pb-hist", hs);
+    me.cr = won; pubMe();
+    if (st.endT >= 60 || test) setTimeout(() => { if (G.over) prizeMachine(); }, 4200); }
+  { const hs = store.get("pb-hist") || [], rate = r => { const g = hs.filter(x => x.r === r); return [g.filter(x => x.w).length, g.length]; }, [hw, hn] = rate("hider"), [sw, sn] = rate("seeker");
+    const best = !hn && !sn ? "" : (hn ? hw/hn : -1) >= (sn ? sw/sn : -1) ? "Hider · won " + hw + " of " + hn + (sn ? "" : " (try seeking!)") : "Seeker · won " + sw + " of " + sn + (hn ? "" : " (try hiding!)");
+    if (best) $("#myStats").insertAdjacentHTML("beforeend", "<dt>You win most as</dt><dd>" + esc(best) + "</dd>"); }
   flashCard("Game over", tl.textContent, w, cap(mine.start) + " · " + (mine.what || "Watched") + (mine.tags ? " · " + mine.tags + " tag" + (mine.tags === 1 ? "" : "s") : ""), 300, 3400);
   $("#againBtn").hidden = !isHost(); $("#endWait").hidden = isHost();
   $("#endWrap").hidden = false;
@@ -1541,11 +1651,11 @@ function renderMap(){
     const lost = !lobby && p.id !== me.id && now - p.seen > STALE, lostTxt = !lost ? "" : now - p.seen > DROP ? " 📵 out" : " 📵 " + fmt((DROP - (now - p.seen))/1000),
           idle = !!p.away || now - p.seen > STALE, masked = !lobby && p.role === "hider" && p.st === "active" && maskOn(p.id) && me.role === "seeker" && me.st === "active" && !G.over,
           role = lobby && cfg.randomRoles ? "hider" : masked ? "seeker" : p.role, tc = !masked && showTeam(p) && !(lobby && cfg.randomRoles) ? TEAM_COL[teamOf(p)] : "",
-          pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, lostTxt, avaKey.get(p.id) || "", tc, tc ? tinfo(teamOf(p)).icon : ""].join("|");
+          pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, lostTxt, p.fr || "", p.cr ? 1 : 0, avaKey.get(p.id) || "", tc, tc ? tinfo(teamOf(p)).icon : ""].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (pic ? " pic" : "") + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (tc ? esc(tinfo(teamOf(p)).icon) + " " : "") + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (lostTxt || (idle ? " 💤" : ""))) + '</b><i style="' + (pic ? "background-image:url(" + pic + ");background-size:cover;background-position:center;" + (tc ? "border-color:" + tc : "") : tc ? "background:" + tc : "") + '"></i></div>'})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (pic ? " pic" : "") + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (tc ? esc(tinfo(teamOf(p)).icon) + " " : "") + (p.cr && !masked ? '<span class="crown">👑</span>' : "") + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (lostTxt || (idle ? " 💤" : ""))) + '</b><i style="' + (pic ? "background-image:url(" + pic + ");background-size:cover;background-position:center;" + (tc ? "border-color:" + tc : "") : tc ? "background:" + tc : "") + '"></i>' + (masked ? "" : frU(p.fr)) + '</div>'})); }
     m.setLatLng(rp || [p.lat, p.lng]);
   }
   const liveC = new Set();                   // where people were caught or found the spot: shown once the game is over
@@ -1592,8 +1702,8 @@ $("#shuffleBtn").addEventListener("click", () => {
 });
 $("#centerBtn").addEventListener("click", () => { if (me.lat != null){ userMoved = false; hostSet({center:{lat:me.lat, lng:me.lng}}); } });
 $("#shareBtn").addEventListener("click", async () => {
-  const url = location.origin + location.pathname + location.search + "#" + code, text = "Join my Zone Hunt game! Code: " + code;
-  try { if (navigator.share) return await navigator.share({title:"Zone Hunt", text, url}); } catch(e){ return; }
+  const url = location.origin + location.pathname + location.search + "#" + code, text = "Join my Peekaboom game! Code: " + code;
+  try { if (navigator.share) return await navigator.share({title:"Peekaboom", text, url}); } catch(e){ return; }
   try { await navigator.clipboard.writeText(text + " " + url); $("#shareBtn").textContent = "Link copied"; } catch(e){ $("#shareBtn").textContent = code; }
   setTimeout(() => $("#shareBtn").textContent = "Share invite", 1800);
 });
@@ -1670,6 +1780,63 @@ $("#againBtn").addEventListener("click", () => { if (isHost()) hostSet({phase:"l
 $("#meBtn").addEventListener("click", () => { follow = true; if (me.lat != null) map.setView([me.lat, me.lng], Math.max(map.getZoom(), 17)); });
 $("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
 
+/* ---------------- frames: free collectibles, one random prize per game ---------------- */
+const FRAMES = {
+  bubble: {name:"Bubblegum",  r:"common"},  ocean:{name:"Deep Blue",   r:"common"},  glow:{name:"Glow Stick",   r:"common"},
+  gold:   {name:"Gold Medal", r:"rare"},    ice:  {name:"Brain Freeze",r:"rare"},    flame:{name:"Hot Pursuit", r:"rare"},
+  rainbow:{name:"Double Rainbow", r:"epic"}, galaxy:{name:"Cosmic",    r:"epic"},    boom:{name:"BOOM",         r:"legendary"}};
+const RAR = {common:{w:14, c:"#6B8FA8", n:"Common"}, rare:{w:10, c:"#1A7FF0", n:"Rare"}, epic:{w:7, c:"#8445F0", n:"Epic"}, legendary:{w:4, c:"#F0217E", n:"Legendary"}};
+const coll = () => { const c = store.get("pb-frames") || {}; c.own = c.own || {}; return c; };
+function wearFrame(id){ const c = coll(); c.eq = id && c.own[id] ? id : ""; store.set("pb-frames", c); me.fr = c.eq; if (N.client) pubMe(); renderShelf(); if (cfg) renderLobby(true); }
+const frU = id => id && FRAMES[id] ? '<u class="fr fr-' + id + '"></u>' : "";
+function renderShelf(){
+  const c = coll(), n = Object.keys(FRAMES).filter(k => c.own[k]).length;
+  $("#shelfCount").textContent = n + " of 9"; $("#frameBtn").textContent = "🎁 Frames " + n + "/9";
+  const pic = me.ava ? "background-image:url(" + me.ava + ")" : "";
+  $("#shelfGrid").innerHTML = Object.entries(FRAMES).map(([k, f]) => c.own[k]
+    ? '<button type="button" class="ftile" data-k="' + k + '" aria-pressed="' + (c.eq === k) + '"><span class="fav">' + frU(k) + '<span class="fdot" style="' + pic + '"></span></span>' + esc(f.name) + '<small class="r-' + f.r + '">' + RAR[f.r].n + (c.own[k] > 1 ? " ×" + c.own[k] : "") + "</small></button>"
+    : '<div class="ftile locked"><span class="fdot">?</span>???<small class="r-' + f.r + '">' + RAR[f.r].n + "</small></div>").join("");
+}
+$("#frameBtn").addEventListener("click", () => { renderShelf(); $("#shelf").hidden = false; });
+$("#shelfClose").addEventListener("click", () => $("#shelf").hidden = true);
+$("#frameNone").addEventListener("click", () => wearFrame(""));
+$("#shelf").addEventListener("click", e => { if (e.target.id === "shelf") $("#shelf").hidden = true; const t = e.target.closest(".ftile[data-k]"); if (t) wearFrame(t.dataset.k); });
+function rollFrame(){ let tot = 0; for (const f of Object.values(FRAMES)) tot += RAR[f.r].w; let x = Math.random()*tot;
+  for (const [k, f] of Object.entries(FRAMES)){ x -= RAR[f.r].w; if (x < 0) return k; } return "bubble"; }
+function prizeMachine(){                    // the gumball machine: turn, drop, crack open, reveal
+  const k = rollFrame(), f = FRAMES[k], col = RAR[f.r].c, c = coll(), isNew = !c.own[k];
+  c.own[k] = (c.own[k] || 0) + 1; if (!c.eq) c.eq = k; store.set("pb-frames", c); me.fr = c.eq; if (N.client) pubMe();
+  const gb = $("#gumball"), st = $("#gbStage"), ball = $("#gbBall"), fx = $("#gbFx"), prize = $("#gbPrize"), mach = $("#gbMach");
+  st.style.setProperty("--bc", col); prize.hidden = true; mach.style.opacity = 1; $("#gbTitle").textContent = "Prize time!";
+  const cols = ["#FF6FB5","#1A7FF0","#8CFF5A","#FFD54A","#7FDBFF","#FF7A00","#8445F0","#F0217E","#4CE06A","#2EC5FF"];
+  $("#gbGlobe").innerHTML = Array.from({length:14}, (_, i) => '<span style="left:' + (12 + (i % 5)*25 + (Math.floor(i/5) % 2)*12) + "px;top:" + (118 - Math.floor(i/5)*24) + "px;background:" + cols[i % cols.length] + '"></span>').join("");
+  gb.hidden = false; const halves = ball.querySelectorAll("i"); let done = false, anims = [];
+  const A = (el, kf, o) => { const a = el.animate(kf, {fill:"forwards", easing:"ease-in-out", ...o}); anims.push(a); return a.finished.catch(() => {}); };
+  const show = () => { if (done) return; done = true; anims.forEach(a => { try { a.cancel(); } catch(e){} });
+    mach.style.opacity = 0; ball.style.opacity = 0; $("#gbTitle").textContent = isNew ? "New frame!" : "Got it again";
+    const pic = me.ava ? "background-image:url(" + me.ava + ")" : "";
+    prize.innerHTML = '<span class="fav">' + frU(k) + '<span class="bigdot" style="' + pic + '"></span></span><strong>' + esc(f.name) + '</strong><small style="color:' + col + '">' + RAR[f.r].n + "</small><em>" +
+      (isNew ? "Added to your frames. " + Object.keys(FRAMES).filter(x => c.own[x]).length + " of 9 collected" : "You already had this one. Keep playing to find the rest") +
+      '</em><div class="endbtns">' + (c.eq !== k ? '<button class="act go" type="button" id="gbWear">Wear it</button>' : "") + '<button class="ghost" type="button" id="gbOk">Nice</button></div>';
+    prize.hidden = false; prize.animate([{transform:"scale(.6)", opacity:0}, {transform:"scale(1.06)", opacity:1, offset:.7}, {transform:"scale(1)", opacity:1}], {duration:450, easing:"ease-out"});
+    const w = $("#gbWear"); if (w) w.onclick = () => { wearFrame(k); gb.hidden = true; };
+    $("#gbOk").onclick = () => { gb.hidden = true; }; };
+  st.onclick = e => { if (!done && !e.target.closest("button")) show(); };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return show();
+  (async () => {
+    await A($("#gbKnob"), [{transform:"rotate(0)"}, {transform:"rotate(360deg)"}], {duration:800});
+    ball.style.opacity = 1;
+    await A(ball, [{transform:"translateY(-18px) scale(.5)", opacity:0}, {transform:"translateY(6px) scale(1)", opacity:1, offset:.7}, {transform:"translateY(0) scale(1)", opacity:1}], {duration:450});
+    await A(ball, [{transform:"translate(0,0) scale(1)"}, {transform:"translate(0,-125px) scale(3.2)"}], {duration:700});
+    A(mach, [{opacity:1}, {opacity:.15}], {duration:500});
+    await A(ball, [0, -12, 12, -10, 10, -6, 6, 0].map(r => ({transform:"translate(0,-125px) scale(3.2) rotate(" + r + "deg)"})), {duration:650, easing:"linear"});
+    A(halves[0], [{transform:"none"}, {transform:"translate(-6px,-24px) rotate(-35deg)", opacity:0}], {duration:420});
+    A(halves[1], [{transform:"none"}, {transform:"translate(6px,22px) rotate(30deg)", opacity:0}], {duration:420});
+    await A(fx, [{transform:"scale(1)", opacity:1}, {transform:"scale(26)", opacity:0}], {duration:520, easing:"ease-out"});
+    show();
+  })();
+}
+
 /* ---------------- home background: a pretend game running behind the buttons ---------------- */
 const homeBg = (() => {
   const cv = $("#homeBg"), x = cv.getContext("2d"), still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1734,6 +1901,7 @@ const homeBg = (() => {
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 buildLobbyControls();
 homeBg.start();
+me.fr = coll().eq || ""; renderShelf();
 $("#puList").innerHTML = Object.entries(ITEMS).map(([k, it]) => '<li class="purow" role="button" tabindex="0" data-k="' + k + '" aria-pressed="' + (k === puSel) + '"><i>' + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + '</span><input type="checkbox" class="puon" data-k="' + k + '" aria-label="Use ' + esc(it.name) + ' in this game"></li>').join("");
 $("#puList").addEventListener("change", e => {          // host picks which power-ups show up on the map
   const c = e.target.closest(".puon"); if (!c || !isHost()) return;

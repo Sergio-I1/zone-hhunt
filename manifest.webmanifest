@@ -1,13 +1,13 @@
 {
-  "name": "Zone Hunt",
-  "short_name": "Zone Hunt",
+  "name": "Peekaboom",
+  "short_name": "Peekaboom",
   "description": "Real-life hide-and-seek on a live map with a shrinking zone.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#EDF0EA",
-  "theme_color": "#1E6A49",
+  "background_color": "#F3F1F7",
+  "theme_color": "#FF2E8B",
   "categories": ["games"],
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
