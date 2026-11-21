@@ -158,7 +158,11 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media (max-width:520px){.modes{grid-template-columns:1fr}}
 .mode{position:relative;display:grid;gap:4px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer}
-.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode{padding-left:38px!important}
+.mode input{position:absolute;left:10px;top:13px;margin:0;width:20px;height:20px;border-radius:50%;-webkit-appearance:none;appearance:none;border:2px solid var(--muted);background:var(--surface);cursor:pointer}
+.mode input:checked{border-color:var(--zone);background:radial-gradient(circle,var(--zone) 0 45%,var(--surface) 50%)}
+.mode.pv:not(:has(input:checked)){border-style:dashed;border-color:var(--hider)}
+fieldset[disabled] .mode input{cursor:default}
 .mode strong{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
 .mode span{font-size:13.5px;color:var(--muted)}
 .mode:has(input:checked){border-color:var(--zone);box-shadow:0 0 0 3px color-mix(in srgb,var(--zone) 18%,transparent)}
@@ -261,7 +265,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid .mode{padding:8px 6px;gap:0;min-height:62px;align-content:center;text-align:center}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
+  .modegrid .mode{padding:8px 4px 8px 26px!important;gap:0;min-height:62px;align-content:center;text-align:left}.modegrid .mode input{left:6px;top:50%;transform:translateY(-50%);width:16px;height:16px}
+  .modegrid .mode strong{font-size:15px!important;overflow-wrap:anywhere}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
   #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
 .demo canvas{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
@@ -321,6 +326,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mtoast{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);white-space:nowrap;background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:8px;font-weight:800;text-transform:uppercase;padding:4px 7px;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,.25)}
 .mjam{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;background:repeating-linear-gradient(45deg,#18211c,#18211c 5px,#232e27 5px,#232e27 10px)}
 .mbtn.dim{opacity:.4}
+.mitem{position:absolute;transform:translate(-50%,-50%);font-style:normal;font-size:11px;width:16px;height:16px;border-radius:50%;background:#fff;border:1.5px solid var(--zone);display:grid;place-items:center;animation:mbob 1s ease-in-out infinite alternate}
+@keyframes mbob{to{transform:translate(-50%,-62%)}}
+.mdot{transition:left .08s linear,top .08s linear}
 .mbank i.used{box-shadow:0 0 0 2px var(--zone)}
 .pugrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
 .pugrid .demo{position:sticky;top:8px}
@@ -485,6 +493,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <div class="modegrid">
             <div class="modes" id="modes"></div>
             <div class="modeside">
+              <div class="lbl" id="pvLbl">Preview</div>
             <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
             <p class="msg" id="demoCap"></p>
             <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
@@ -1012,16 +1021,17 @@ const reveal = () => flashCard("You are a", me.role === "hider" ? "Hider" : "See
 function buildLobbyControls(){
   const box = $("#modes");
   for (const [k, m] of Object.entries(MODES)){
-    const l = document.createElement("label"); l.className = "mode";
+    const l = document.createElement("div"); l.className = "mode";
     l.dataset.k = k;
-    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '" aria-label="Play ' + esc(m.name) + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", e => {
       if (!isHost()) return;
       if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; return openPaywall(MODES[k].name); }
       hostSet({mode:k}); });
-    const pick = () => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); } };
-    l.addEventListener("pointerenter", pick); l.addEventListener("click", pick);
-    l.addEventListener("pointerleave", e => { if (e.pointerType === "mouse"){ demoMode = null; demoT0 = performance.now(); } });
+    const pick = () => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); }       // tapping the tile only previews; the circle picks
+      for (const t of box.children) t.classList.toggle("pv", t === l); };
+    l.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") pick(); }); l.addEventListener("click", pick);
+    l.addEventListener("pointerleave", e => { if (e.pointerType === "mouse"){ demoMode = null; demoT0 = performance.now(); l.classList.remove("pv"); } });
     box.append(l);
   }
   for (const [sid, , key] of SL) $("#" + sid).addEventListener("input", e => {
@@ -1286,8 +1296,8 @@ function drawScene(cv, d, u){
 function drawDemo(){
   requestAnimationFrame(drawDemo);
   if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
-  const now = performance.now(), k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((now - demoT0)/9000) % 1;
-  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").innerHTML = "<b>" + esc(MODES[k].name) + ".</b> " + esc(MODES[k].blurb) + (MODES[k].how ? " " + esc(MODES[k].how) : ""); }
+  const now = performance.now(), k = DEMOS[demoMode] ? demoMode : cfg.mode; { const pl = $("#pvLbl"); if (pl) pl.textContent = "Preview: " + MODES[k].name + (k === cfg.mode ? " (picked)" : ""); } const u = stillDemo ? .45 : ((now - demoT0)/9000) % 1;
+  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").innerHTML = "<b>" + esc(MODES[k].name) + ".</b> " + esc(MODES[k].blurb) + (MODES[k].how && innerWidth > 560 ? " " + esc(MODES[k].how) : ""); }
   drawScene($("#demo"), DEMOS[k](u), u);
   const pc = $("#puDemo"); if (pc.offsetParent !== null){ const u2 = stillDemo ? .5 : ((now - puT0)/8000) % 1; drawScene(pc, PUDEMOS[puSel](u2), u2); }
 }
@@ -1305,8 +1315,38 @@ function setMock(tab){
   else if (t === "hit"){ $("#mockHearts").innerHTML = hearts(L - 1, 1);
     hA.textContent = one ? "You got caught" : "Tagged! Get away · safe 0:24"; hT.hidden = false; hT.textContent = one ? "You got caught" : "Tagged! " + (cfg ? cfg.grace : 30) + " s to get away";
     sA.textContent = one ? "You got John" : "Hider spotted · 9 m"; sB.textContent = one ? "Tag hider" : "John is safe 0:24"; sB.classList.add("dim"); }
-  else { $("#mockHearts").innerHTML = hearts(L); hA.hidden = true; hT.hidden = false; hT.textContent = "Seekers jammed for " + (cfg ? cfg.pdur : 30) + " s";
-    sA.hidden = true; jam.hidden = false; jam.textContent = "Signal jammed · 0:27"; sB.textContent = "Tag hider"; sB.classList.add("dim"); }
+  else { $("#mockHearts").innerHTML = hearts(L); }
+  powMock(t === "pow");
+}
+let powT = 0, powT0 = 0;                     // "Using a power-up": walk to it, grab it, use it, see what it does
+function powMock(on){
+  const maps = document.querySelectorAll(".mock .mmap"); if (maps.length < 2) return;
+  const [hm, sm] = maps, hYou = hm.querySelector(".mdot.you"), hSk = hm.querySelector(".mdot.seeker"), sYou = sm.querySelector(".mdot.you"), sHd = sm.querySelector(".mdot.hider");
+  let item = hm.querySelector(".mitem"); if (!item){ item = document.createElement("i"); item.className = "mitem"; item.textContent = "📡"; hm.append(item); }
+  for (const d of [hYou, hSk, sYou, sHd]) if (!d.dataset.home) d.dataset.home = d.getAttribute("style");
+  if (on && powT) return;                   // already playing (the lobby redraws often)
+  clearInterval(powT); powT = 0;
+  if (!on){ for (const d of [hYou, hSk, sYou, sHd]) d.setAttribute("style", d.dataset.home); item.hidden = true; $("#mockBank").innerHTML = "<i>📡</i><i>👻</i>"; return; }
+  powT0 = performance.now();
+  const at = (d, x, y) => { d.style.left = x + "%"; d.style.top = y + "%"; }, lerp = (a, b, f) => a + (b - a)*Math.max(0, Math.min(1, f));
+  const step = () => {
+    if ($("#lobby").hidden || mockTab !== "pow"){ clearInterval(powT); powT = 0; return; }
+    const sec = ((performance.now() - powT0)/1000) % 9, hA = $("#mhAlert"), hT = $("#mhToast"), sA = $("#msAlert"), jam = $("#msJam"), sB = $("#msBtn"), bank = $("#mockBank");
+    const got = sec >= 2.6, used = sec >= 4.2, jamOn = sec >= 4.4 && sec < 8.4;
+    at(hYou, lerp(30, 64, sec/2.6) + (used ? lerp(0, -22, (sec - 4.4)/3) : 0), lerp(62, 40, sec/2.6) + (used ? lerp(0, 26, (sec - 4.4)/3) : 0));
+    at(hSk, lerp(78, 60, sec/4.2), lerp(24, 38, sec/4.2));
+    item.hidden = got; item.style.left = "64%"; item.style.top = "40%";
+    at(sYou, 50, 54); at(sHd, lerp(66, 58, sec/4.2) + (used ? lerp(0, -18, (sec - 4.4)/3) : 0), lerp(36, 44, sec/4.2) + (used ? lerp(0, 22, (sec - 4.4)/3) : 0));
+    sHd.style.opacity = jamOn ? 0 : 1;
+    bank.innerHTML = (got && !used ? '<i class="used">📡</i>' : "") + "<i>👻</i>"; bank.hidden = false;
+    hA.hidden = false; hA.className = "malert " + (sec < 2.6 ? "spot" : "danger");
+    hA.textContent = sec < 2.6 ? "Power-up nearby · walk to it" : !used ? "Got a Jammer! Tap it below" : jamOn ? "Seekers can't see you · run!" : "Jammer wore off";
+    hT.hidden = !(sec >= 4.2 && sec < 5.6); hT.textContent = "📡 Jammed " + (cfg ? cfg.pdur : 30) + " s";
+    sA.hidden = jamOn; sA.className = "malert spot"; sA.textContent = sec < 4.2 ? "Hider spotted · " + Math.round(lerp(30, 9, sec/4.2)) + " m" : "Where did John go?";
+    jam.hidden = !jamOn; jam.textContent = "Signal jammed · " + fmt(Math.max(0, (cfg ? cfg.pdur : 30) - (sec - 4.4)*7));
+    sB.textContent = sec < 4.2 && sec > 3 ? "Tag John" : "Tag hider"; sB.classList.toggle("dim", !(sec < 4.2 && sec > 3));
+  };
+  step(); powT = setInterval(step, 80);
 }
 
 /* ---------------- photo icons ---------------- */
@@ -1970,7 +2010,7 @@ $("#avaIn").addEventListener("change", async e => { const f = e.target.files && 
   try { setMyAva(await shrinkPhoto(f)); } catch(err){ $("#avaMsg").textContent = "That photo didn't work. Try another one."; } });
 { const sv = store.get("zh-ava"); if (okImg(sv)){ me.ava = sv; me.av = "s" + sv.length.toString(36) + sv.slice(-6).replace(/[^A-Za-z0-9]/g, ""); avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } showMyAva(); }
 requestAnimationFrame(drawDemo);
-$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " each game mode to see how it works.";
+$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a mode to preview it. The host taps the circle ○ to pick it.";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.code !== hashCode) setInvite(hashCode); }
