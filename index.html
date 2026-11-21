@@ -562,7 +562,7 @@ const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884
 const QS = new URLSearchParams(location.search);
 const BROKER_OVERRIDE = QS.get("broker");
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const SIGHT0 = 30, PICK_R = 12, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000;
+const SIGHT0 = 30, PICK_R = 12, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000, DROP = 60000;   // DROP: a player gone this long is out until they come back
 const MODES = {
   classic:  {name:"Classic",            blurb:"Seekers hunt, caught hiders are out. Hiders' spots ping on the map every few minutes."},
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
@@ -605,21 +605,23 @@ function ring(c, n = 72){ const pts = []; for (let i = 0; i < n; i++){ const a =
 const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
 
 /* ---------------- me & shared state ---------------- */
-const saved = store.get("zh-session", sessionStorage) || {};
+const SS = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() ? localStorage : sessionStorage;   // the app remembers your game even if it gets closed
+let saved = store.get("zh-session", SS) || {};
+if (saved.code && saved.at && Date.now() - saved.at > 3*3600e3) saved = {id:saved.id};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
              lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
-             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0 };
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0, walk:0 };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
             pings:[], log:[], liveSince:0,
-            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), masks:new Map(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, thawTarget:null, shChoices:[] };
+            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), masks:new Map(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, drop:new Map(), thawTarget:null, shChoices:[] };
 const maskOn = id => { const k = G.masks.get(id); return !!k && k.until > Date.now(); };          // disguised as a seeker right now
 const dn = p => me.role !== "seeker" || p.role !== "hider" ? p.name : maskOn(p.id) && G.masks.get(p.id).name ? G.masks.get(p.id).name : p.alias || p.name;   // name swap fools seekers only
 if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
 function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null,
-  x:{team:me.team, lives:me.lives, safeUntil:me.safeUntil, ghostUntil:me.ghostUntil, alias:me.alias, inv:me.inv, took:me.took, fcode:me.fcode}}, sessionStorage); }
+  x:{team:me.team, lives:me.lives, safeUntil:me.safeUntil, ghostUntil:me.ghostUntil, alias:me.alias, inv:me.inv, took:me.took, fcode:me.fcode, walk:me.walk}, at:Date.now()}, SS); }
 
 /* ---------------- network ---------------- */
 const N = { client:null, key:null, base:null, onCfg:null };
@@ -675,7 +677,7 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took};
+             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took, wk:Math.round(me.walk)};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
@@ -751,8 +753,9 @@ function askNotifications(){      // Android 13+ shows the "sharing your locatio
   if (PLATFORM !== "android" || notifAsked) return; notifAsked = true;
   try { Capacitor.registerPlugin("LocalNotifications").requestPermissions().catch(() => {}); } catch(e){}
 }
+function addWalk(m, acc){ if (cfg && cfg.phase === "live" && isFinite(m) && m > 3 && m < 150 && (acc == null || acc < 35)) me.walk += m; }
 function onFix(lat, lng, acc){
-  gpsErr = ""; const moved = dist(me, {lat, lng}); me.lat = lat; me.lng = lng; me.acc = acc;
+  gpsErr = ""; const moved = dist(me, {lat, lng}); addWalk(moved, acc); me.lat = lat; me.lng = lng; me.acc = acc;
   if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
   if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
 }
@@ -766,7 +769,7 @@ function startGPS(){
     return; }
   if (!navigator.geolocation){ gpsErr = "This browser has no location support."; return; }
   watchId = navigator.geolocation.watchPosition(pos => {
-    gpsErr = ""; const moved = dist(me, {lat:pos.coords.latitude, lng:pos.coords.longitude});
+    gpsErr = ""; const moved = dist(me, {lat:pos.coords.latitude, lng:pos.coords.longitude}); addWalk(moved, pos.coords.accuracy);
     me.lat = pos.coords.latitude; me.lng = pos.coords.longitude; me.acc = pos.coords.accuracy;
     if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
     if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
@@ -819,13 +822,13 @@ async function joinGame(c0, rejoin){
   code = cd; cfg = null; await derive(code);
   const got = new Promise(res => { N.onCfg = () => res(true); setTimeout(() => res(false), 6000); });
   wire(c); ev({t:"hello"});
-  if (!(await got)){ closeNet(); code = null; busy(false); store.del("zh-session", sessionStorage); return homeMsg("No game found with code " + cd + ". Check the code with your host.", true); }
+  if (!(await got)){ closeNet(); code = null; busy(false); store.del("zh-session", SS); return homeMsg("No game found with code " + cd + ". Check the code with your host.", true); }
   startGPS(); pubMe(); busy(false); homeMsg("");
 }
 function leave(){
   ev({t:"bye"}); setTimeout(closeNet, 150); stopGPS();
   code = null; cfg = null; players.clear(); me.lat = me.lng = null; me.st = "active"; me.role = "hider";
-  store.del("zh-session", sessionStorage); store.set("zh-session", {id:me.id}, sessionStorage);
+  store.del("zh-session", SS); store.set("zh-session", {id:me.id}, SS);
   try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
   setInvite(null); homeMsg("");
   show("home");
@@ -841,9 +844,9 @@ function show(which){
   setTimeout(() => { map.invalidateSize(); fitZone(); }, 60);
 }
 function onPhase(prev){
-  const s = store.get("zh-session", sessionStorage) || {};
+  const s = store.get("zh-session", SS) || {};
   if (cfg.phase === "lobby"){
-    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; me.alias = ""; me.ghostUntil = 0; me.safeUntil = 0; me.inv = []; me.took = []; pubMe(); }
+    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; me.alias = ""; me.ghostUntil = 0; me.safeUntil = 0; me.inv = []; me.took = []; me.walk = 0; pubMe(); }
     else if (prev === null && s.code === code && s.role){ me.role = s.role; if (s.x && s.x.team != null) me.team = s.x.team; }
     $("#endWrap").hidden = true; userMoved = false; show("lobby"); renderLobby(true);
   } else {
@@ -1247,6 +1250,7 @@ function rec(k, m){                          // remember what happened, for the 
   G.hist.push({k, id:m.id, by:m.by || null, t: Math.max(0, (Date.now() - cfg.t0)/1000), lat: m.lat != null ? m.lat : p.lat, lng: m.lng != null ? m.lng : p.lng});
 }
 const OUTK = {caught:"Caught", infected:"Infected", frozen:"Frozen", zoneout:"Lost to the zone"};
+const walkTxt = m => !m ? "–" : (m < 1000 ? Math.round(m) + " m" : (m/1000).toFixed(2) + " km") + " (" + (m/1609.34).toFixed(2) + " mi)";
 function buildStats(){
   const endT = Math.max(0, Math.min(((cfg.endedAt || Date.now()) - cfg.t0)/1000, cfg.head + cfg.minutes*60));
   const rows = [...players.values()].map(p => {
@@ -1254,7 +1258,7 @@ function buildStats(){
     const hid = start === "hider" ? (out ? out.t : endT) : found ? endT - found.t : 0;
     const tags = G.hist.filter(h => h.by === p.id && (OUTK[h.k] || h.k === "hit")).length;
     const what = out ? OUTK[out.k] + " at " + fmt(out.t) + (out.by ? " by " + nameOf(out.by) : "") : found ? "Found the spot at " + fmt(found.t) : start === "hider" ? "Never caught" : "Seeker all game";
-    return {id:p.id, name:p.name, start, hid, tags, what, found: found ? found.t : null, tm: teamsOn() && start === "hider" ? teamOf(p) : null, free: start === "hider" && !out};
+    return {id:p.id, name:p.name, wk: p.id === me.id ? Math.round(me.walk) : p.wk || 0, start, hid, tags, what, found: found ? found.t : null, tm: teamsOn() && start === "hider" ? teamOf(p) : null, free: start === "hider" && !out};
   }).sort((a, b) => (a.start === b.start ? b.hid - a.hid : a.start === "hider" ? -1 : 1));
   return {rows, endT};
 }
@@ -1270,13 +1274,15 @@ function playReplay(){
 }
 function calcWinner(t, end){
   if (cfg.mode === "sardines"){ let seek = 0, total = 0; const n0 = Date.now();
-    for (const p of players.values()) if (p.st === "active" && n0 - p.seen < 120000){ total++; if (p.role === "seeker") seek++; }
+    for (const p of players.values()) if (p.st === "active" && n0 - p.seen < DROP){ total++; if (p.role === "seeker") seek++; }
     if (t >= end) return "hiders";
     return t >= cfg.head + 5 && n0 - G.liveSince > 8000 && total >= 2 && seek <= (total >= 3 ? 1 : 0) ? "packed" : null; }
   const now = Date.now(); let free = 0;
-  for (const p of players.values()) if (p.role === "hider" && p.st === "active" && now - p.seen < 120000) free++;
+  for (const p of players.values()) if (p.role === "hider" && p.st === "active" && now - p.seen < DROP) free++;
+  let hunters = 0; for (const p of players.values()) if (p.role === "seeker" && p.st === "active" && now - p.seen < DROP) hunters++;
   if (t >= end) return free ? "hiders" : "seekers";
   if (t >= cfg.head + 5 && now - G.liveSince > 8000 && free === 0) return "seekers";
+  if (t >= cfg.head + 5 && now - G.liveSince > DROP && hunters === 0 && free > 0) return "hiders";   // every seeker lost connection for a minute
   return null;
 }
 function addLog(text){ G.log.unshift({t: Math.max(0, G.t), text}); G.log.length = Math.min(G.log.length, 30); renderLog(); }
@@ -1308,10 +1314,10 @@ function showEnd(w){
     topH = ts.map((t, n) => "<dt>" + (n ? "Team #" + (n + 1) : "Top team") + "</dt><dd>" + esc(tinfo(t.i).icon + " " + tinfo(t.i).name) + (t.free ? " · " + t.free + " still free" : " · lasted " + fmt(t.best)) + "</dd>").join("") + topH; }
   $("#endStats").innerHTML = topH;
   const cap = r => r === "hider" ? "Hider" : "Seeker";
-  $("#myStats").innerHTML = [["Started as", cap(mine.start)], ["Time as a hider", mine.hid ? fmt(mine.hid) : "None"], ["What happened", mine.what || "Watched"], ["Tags made", String(mine.tags)]]
+  $("#myStats").innerHTML = [["Started as", cap(mine.start)], ["Time as a hider", mine.hid ? fmt(mine.hid) : "None"], ["What happened", mine.what || "Watched"], ["Tags made", String(mine.tags)], ["Distance walked", walkTxt(mine.wk || 0) + (mine.wk > 50 ? " · about " + Math.round(mine.wk/0.75).toLocaleString() + " steps" : "")]]
     .map(r => "<dt>" + r[0] + "</dt><dd>" + esc(r[1]) + "</dd>").join("");
-  $("#allStats").innerHTML = "<tr><th>Player</th><th>As hider</th><th>What happened</th><th>Tags</th></tr>" + st.rows.map(r =>
-    '<tr><td><i class="mark ' + r.start + '"></i>' + esc(r.name) + "<small>Started as " + r.start + (r.tm != null ? " · " + esc(tinfo(r.tm).icon + " " + tinfo(r.tm).name) : "") + '</small></td><td class="num">' + (r.hid ? fmt(r.hid) : "–") + "</td><td>" + esc(r.what) + '</td><td class="num">' + r.tags + "</td></tr>").join("");
+  $("#allStats").innerHTML = "<tr><th>Player</th><th>As hider</th><th>What happened</th><th>Tags</th><th>Walked</th></tr>" + st.rows.map(r =>
+    '<tr><td><i class="mark ' + r.start + '"></i>' + esc(r.name) + "<small>Started as " + r.start + (r.tm != null ? " · " + esc(tinfo(r.tm).icon + " " + tinfo(r.tm).name) : "") + '</small></td><td class="num">' + (r.hid ? fmt(r.hid) : "–") + "</td><td>" + esc(r.what) + '</td><td class="num">' + r.tags + '</td><td class="num">' + walkTxt(r.wk) + "</td></tr>").join("");
   $("#replayBtn").hidden = !(cfg.replay && G.tracks.size);
   $("#mapBtn").hidden = !G.hist.some(h => h.lat != null && (OUTK[h.k] || h.k === "found"));
   flashCard("Game over", tl.textContent, w, cap(mine.start) + " · " + (mine.what || "Watched") + (mine.tags ? " · " + mine.tags + " tag" + (mine.tags === 1 ? "" : "s") : ""), 300, 3400);
@@ -1327,6 +1333,12 @@ function tick(){
   for (const [id, p] of players) if (id !== me.id && now - p.seen > (cfg.phase === "lobby" ? 45000 : 900000)) players.delete(id);
   if (cfg.phase === "lobby"){ G.over = false; renderLobby(); renderMap(); return; }
 
+  if (cfg.phase === "live") for (const p of players.values()){ if (p.id === me.id || p.st !== "active") continue;   // lost-connection countdown
+    const gone = now - p.seen, k = gone > DROP ? 2 : gone > STALE ? 1 : 0, was = G.drop.get(p.id) || 0;
+    if (k === was) continue; G.drop.set(p.id, k);
+    if (k === 1 && !was) addLog(p.name + " lost connection · " + fmt((DROP - gone)/1000) + " to come back");
+    else if (k === 2) addLog(p.name + " is out: lost connection (can still rejoin)");
+    else if (!k) addLog(p.name + " reconnected"); }
   const t = G.t = (now - cfg.t0)/1000, end = cfg.head + cfg.minutes*60;
   G.hunt = t >= cfg.head; G.zi = zoneAt(t);
   if (cfg.phase === "live"){
@@ -1467,13 +1479,14 @@ function renderMap(){
     if (p.lat == null || !(lobby || canSee(p))) continue;
     const rp = G.replay ? trackAt(p.id, G.replay.t) : null; if (G.replay && !rp) continue;
     seen.add(p.id);
-    const idle = !!p.away || now - p.seen > STALE, masked = !lobby && p.role === "hider" && p.st === "active" && maskOn(p.id) && me.role === "seeker" && me.st === "active" && !G.over,
+    const lost = !lobby && p.id !== me.id && now - p.seen > STALE, lostTxt = !lost ? "" : now - p.seen > DROP ? " 📵 out" : " 📵 " + fmt((DROP - (now - p.seen))/1000),
+          idle = !!p.away || now - p.seen > STALE, masked = !lobby && p.role === "hider" && p.st === "active" && maskOn(p.id) && me.role === "seeker" && me.st === "active" && !G.over,
           role = lobby && cfg.randomRoles ? "hider" : masked ? "seeker" : p.role, tc = !masked && showTeam(p) && !(lobby && cfg.randomRoles) ? TEAM_COL[teamOf(p)] : "",
-          pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, avaKey.get(p.id) || "", tc, tc ? tinfo(teamOf(p)).icon : ""].join("|");
+          pic = avatars.get(p.id) || "", sig = [role, p.st, dn(p), idle, lostTxt, avaKey.get(p.id) || "", tc, tc ? tinfo(teamOf(p)).icon : ""].join("|");
     let m = markers.get(p.id);
     if (!m){ m = L.marker([p.lat, p.lng], {interactive:false, keyboard:false, zIndexOffset: p.id === me.id ? 1000 : 0}).addTo(map); markers.set(p.id, m); }
     if (m._sig !== sig){ m._sig = sig;
-      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (pic ? " pic" : "") + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (tc ? esc(tinfo(teamOf(p)).icon) + " " : "") + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (idle ? " 💤" : "")) + '</b><i style="' + (pic ? "background-image:url(" + pic + ");background-size:cover;background-position:center;" + (tc ? "border-color:" + tc : "") : tc ? "background:" + tc : "") + '"></i></div>'})); }
+      m.setIcon(L.divIcon({className:"", iconSize:[0, 0], html:'<div class="pm ' + role + (pic ? " pic" : "") + (p.st !== "active" ? " gone" : "") + (p.id === me.id ? " you" : "") + (idle ? " stale" : "") + '"><b>' + (tc ? esc(tinfo(teamOf(p)).icon) + " " : "") + (p.id === me.id ? "YOU" : esc(dn(p)) + (p.st === "frozen" ? " ❄" : "") + (lostTxt || (idle ? " 💤" : ""))) + '</b><i style="' + (pic ? "background-image:url(" + pic + ");background-size:cover;background-position:center;" + (tc ? "border-color:" + tc : "") : tc ? "background:" + tc : "") + '"></i></div>'})); }
     m.setLatLng(rp || [p.lat, p.lng]);
   }
   const liveC = new Set();                   // where people were caught or found the spot: shown once the game is over
