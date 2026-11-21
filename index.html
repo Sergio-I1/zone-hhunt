@@ -253,6 +253,16 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .ver summary{cursor:pointer;font-weight:600}
 .ver ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 .demo{display:grid;gap:6px}
+.modegrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:start}
+.modegrid .modes{grid-template-columns:1fr;gap:6px}
+.modeside{display:grid;gap:8px;position:sticky;top:8px}
+.mocks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mocks .mock,.modeside>*{min-width:0}
+.modeside .mscreen{font-size:8px}
+@media (max-width:560px){
+  .modegrid .mode{padding:10px;gap:0}.modegrid .mode strong{font-size:17px}.modegrid .mode>span{display:none}
+  .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
+  #demoCap{font-size:12px}}
 .demo canvas{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
 .demo p{margin:0;font-size:13px;color:var(--muted)}
 .pulist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -469,20 +479,16 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         </div>
       </section>
 
-      <section class="sec">
-        <h2>Play area <small id="areaHint"></small></h2>
-        <div class="mapslot lob" id="slotLobby"></div>
-        <div class="rowbtns"><button class="ghost" id="centerBtn" type="button">Center zone on me</button><span class="teamcount" id="gpsLobby"></span></div>
-      </section>
-
       <fieldset id="settings">
-        <section class="sec"><h2>Mode</h2><div class="modes" id="modes"></div>
-          <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
-          <p class="msg" id="demoHint"></p>
-          <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
-            <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button><button type="button" data-t="pow" aria-pressed="false">Using a power-up</button></div>
-          <div class="previews">
+        <section class="sec"><h2>Mode</h2>
+          <div class="modegrid">
+            <div class="modes" id="modes"></div>
+            <div class="modeside">
             <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
+            <p class="msg" id="demoCap"></p>
+            <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
+            <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button><button type="button" data-t="pow" aria-pressed="false">Using a power-up</button></div>
+            <div class="mocks">
             <figure class="mock" aria-label="Example of the hider's screen">
               <div class="mscreen">
                 <div class="mhud"><span><small>Hunt</small>12:40</span><em class="hider">Hider</em></div>
@@ -499,13 +505,22 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               </div>
               <figcaption>Seeker's screen: Tag lights up when a hider is in range</figcaption>
             </figure>
+            </div>
+            </div>
           </div>
-          <p class="msg" id="demoCap"></p></section>
+          <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
+          <p class="msg" id="demoHint"></p>
+</section>
+      <section class="sec">
+        <h2>Play area <small id="areaHint"></small></h2>
+        <div class="mapslot lob" id="slotLobby"></div>
+        <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
+        <div class="rowbtns"><button class="ghost" id="centerBtn" type="button">Center zone on me</button><span class="teamcount" id="gpsLobby"></span></div>
+      </section>
         <section class="sec"><h2>Game settings</h2>
           <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait at base while hiders scatter.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags a hider can take. "I got caught" always ends it at once.</small></div>
           </div>
           <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b><em class="lockb powlock" hidden>🔒 Unlock</em> Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
@@ -996,7 +1011,7 @@ function buildLobbyControls(){
   for (const [k, m] of Object.entries(MODES)){
     const l = document.createElement("label"); l.className = "mode";
     l.dataset.k = k;
-    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒 Unlock</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", e => {
       if (!isHost()) return;
       if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; return openPaywall(MODES[k].name); }
@@ -1269,7 +1284,7 @@ function drawDemo(){
   requestAnimationFrame(drawDemo);
   if (!cfg || cfg.phase !== "lobby" || $("#lobby").hidden) return;
   const now = performance.now(), k = DEMOS[demoMode] ? demoMode : cfg.mode, u = stillDemo ? .45 : ((now - demoT0)/9000) % 1;
-  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").textContent = "Example: " + MODES[k].name + ". Circles are hiders, the diamond is the seeker." + (MODES[k].how ? " " + MODES[k].how : ""); }
+  if (demoCapKey !== k){ demoCapKey = k; $("#demoCap").innerHTML = "<b>" + esc(MODES[k].name) + ".</b> " + esc(MODES[k].blurb) + (MODES[k].how ? " " + esc(MODES[k].how) : ""); }
   drawScene($("#demo"), DEMOS[k](u), u);
   const pc = $("#puDemo"); if (pc.offsetParent !== null){ const u2 = stillDemo ? .5 : ((now - puT0)/8000) % 1; drawScene(pc, PUDEMOS[puSel](u2), u2); }
 }
