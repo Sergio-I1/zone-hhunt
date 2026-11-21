@@ -118,12 +118,12 @@ button{cursor:pointer;touch-action:manipulation}
 .aw span{font-size:13px;color:var(--muted)} .aw span strong{color:var(--ink)}
 @keyframes awin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .puon{margin-left:auto;align-self:center;width:22px;height:22px;flex:none;accent-color:var(--accent)}
-#home{position:relative}
+#home{position:relative;overflow-x:hidden}
 #homeBg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 .homein{position:relative;z-index:1;min-height:calc(100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));grid-template-rows:auto 1fr auto auto;max-width:480px}
 .homecard{align-self:end}
 .homecard .msg:empty{display:none}
-.homein .brand h1{text-shadow:0 2px 18px var(--bg),0 0 4px var(--bg)}
+.homein .brand h1{font-size:clamp(44px,14.5vw,92px);overflow-wrap:anywhere;text-shadow:0 2px 18px var(--bg),0 0 4px var(--bg)}
 .homein .brand p{color:var(--ink);font-weight:600;text-shadow:0 1px 8px var(--bg),0 0 3px var(--bg)}
 .homecard{display:grid;gap:12px;padding:16px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 12px 36px rgba(0,0,0,.18)}
 .homecard .text{font-size:17px;padding:14px}
@@ -1838,7 +1838,7 @@ function prizeMachine(){                    // the gumball machine: turn, drop, 
 }
 
 /* ---------------- home background: a pretend game running behind the buttons ---------------- */
-const homeBg = (() => {
+const homeBg = (() => { try {
   const cv = $("#homeBg"), x = cv.getContext("2d"), still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let W = 0, H = 0, roads = [], parks = [], ags = [], run = false, t0 = performance.now(), last = 0, pings = [];
   const rnd = (a, b) => a + Math.random()*(b - a);
@@ -1891,10 +1891,11 @@ const homeBg = (() => {
     }
   }
   function frame(now){ if (!run) return; if ($("#home").hidden){ run = false; return; }
-    const dt = Math.min(.05, (now - (last || now))/1000); last = now; step(dt); draw(); requestAnimationFrame(frame); }
+    const dt = Math.min(.05, (now - (last || now))/1000); last = now; try { step(dt); draw(); } catch(e){ run = false; return; } requestAnimationFrame(frame); }
   addEventListener("resize", () => { layout(); if (!run) draw(); });
   layout();
-  return { start(){ requestAnimationFrame(() => { measure(); if (still) draw(); }); if (still){ draw(); return; } if (!run){ run = true; last = 0; requestAnimationFrame(frame); } } };
+  return { start(){ try { requestAnimationFrame(() => { measure(); if (still) draw(); }); if (still){ draw(); return; } if (!run){ run = true; last = 0; requestAnimationFrame(frame); } } catch(e){} } };
+  } catch(e){ return { start(){} }; }        // the background is decoration: never let it break the page
 })();
 
 /* ---------------- boot ---------------- */
