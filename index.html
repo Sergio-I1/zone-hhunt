@@ -162,6 +162,9 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
 .mode input{position:absolute;left:-30px;top:50%;transform:translateY(-50%);margin:0;width:20px;height:20px;border-radius:50%;-webkit-appearance:none;appearance:none;border:2px solid var(--muted);background:var(--surface);cursor:pointer}
 .mode input:checked{border-color:var(--zone);background:radial-gradient(circle,var(--zone) 0 45%,var(--surface) 50%)}
 .mode.pv:not(:has(input:checked)){border-style:dashed;border-color:var(--hider)}
+.mode{padding-right:34px!important}
+.pvb{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:9px;color:var(--hider);background:color-mix(in srgb,var(--hider) 14%,transparent)}
+.mode.pv .pvb{background:var(--hider);color:#fff}
 fieldset[disabled] .mode input{cursor:default}
 .mode strong{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
 .mode span{font-size:13.5px;color:var(--muted)}
@@ -261,12 +264,12 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .demo{display:grid;gap:6px}
 .modegrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:start}
 .modegrid .modes{grid-template-columns:1fr;gap:6px}
-.modeside{display:grid;gap:8px;position:sticky;top:8px}
+.modeside{display:grid;gap:8px}
 .mocks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid .mode{padding:10px 10px!important;gap:0;min-height:48px;align-content:center;text-align:left}.modegrid .modes{padding-left:28px}.modegrid .mode input{left:-28px;width:20px;height:20px}
+  .modegrid .mode{padding:10px 32px 10px 10px!important;gap:0;min-height:48px;align-content:center;text-align:left}.modegrid .modes{padding-left:28px}.modegrid .mode input{left:-28px;width:20px;height:20px}
   .modegrid .mode strong{font-size:18px!important;overflow-wrap:anywhere}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
   #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
@@ -1032,7 +1035,7 @@ function buildLobbyControls(){
   for (const [k, m] of Object.entries(MODES)){
     const l = document.createElement("div"); l.className = "mode";
     l.dataset.k = k;
-    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '" aria-label="Play ' + esc(m.name) + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.innerHTML = '<input type="radio" name="mode" id="mode-' + k + '" value="' + k + '" aria-label="Play ' + esc(m.name) + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + '</strong><b class="pvb" aria-hidden="true">▶</b><span>' + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", e => {
       if (!isHost()) return;
       if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; return openPaywall(MODES[k].name); }
@@ -2036,7 +2039,7 @@ $("#avaIn").addEventListener("change", async e => { const f = e.target.files && 
   try { setMyAva(await shrinkPhoto(f)); } catch(err){ $("#avaMsg").textContent = "That photo didn't work. Try another one."; } });
 { const sv = store.get("zh-ava"); if (okImg(sv)){ me.ava = sv; me.av = "s" + sv.length.toString(36) + sv.slice(-6).replace(/[^A-Za-z0-9]/g, ""); avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } showMyAva(); }
 requestAnimationFrame(drawDemo);
-$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a mode to preview it. The host taps the circle ○ to pick it.";
+$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a mode (▶) to preview it. The host taps the circle ○ to pick it.";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.code !== hashCode) setInvite(hashCode); }
