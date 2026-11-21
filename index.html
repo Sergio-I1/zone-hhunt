@@ -125,7 +125,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .dock{background:var(--surface);border-top:1px solid var(--line);padding:10px max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));display:grid;gap:8px}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .act{border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;color:#fff}
-.act.tag,.act.join{background:var(--seeker)} .act.caught{background:var(--hider)}
+.act.tag,.act.join{background:var(--seeker)}
+.act.tag.cool{background:linear-gradient(90deg,var(--seeker) var(--fill,0%),color-mix(in srgb,var(--seeker) 35%,transparent) var(--fill,0%));font-weight:600;opacity:1} .act.caught{background:var(--hider)}
 .act.go{background:var(--accent);color:var(--accent-ink)}
 .act[disabled]{opacity:.4;cursor:not-allowed}
 .counts{font-size:13px;color:var(--muted);margin-left:auto}
@@ -428,6 +429,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <section class="sec"><h3>Tagging</h3>
               <div class="sliders">
                 <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>After a tag, the hider can't be tagged again for this long.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sTagCd">Tag cooldown</label><output id="oTagCd"></output></div><input type="range" id="sTagCd" min="0" max="60" step="5"><small>After a seeker tags anyone, they wait this long before they can tag again.</small></div>
                 <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close a seeker must be for the Tag button to work.</small></div>
               </div>
               <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
@@ -579,6 +581,8 @@ const ITEMS = {
   ghost: {icon:"👻", name:"Ghost",      desc:"You vanish from the map and from pings."},
   rat:   {icon:"🐀", name:"Rat",        desc:"Pick a teammate. Seekers see them live. Not in Manhunt."},
   decoy: {icon:"📍", name:"Decoy",      desc:"Tap the map to drop a fake ping with any name."},
+  star:  {icon:"⭐", name:"Superstar",  desc:"Nobody can tag you for a while, not even in real life. The seekers' Tag button won't work on you."},
+  detour:{icon:"🚧", name:"Detour",     desc:"Sends the closest seeker to a small circle across the zone. They can't tag anyone until they get there and stay inside. Only they see the circle."},
   mask:  {icon:"🥸", name:"Disguise",   desc:"Pick any hider, you or someone else, then pick who seekers should think they are. Choose a seeker and they look like that seeker, and Tag won't work on them."}
 };
 const TEAM_COL = ["#2F6FE4", "#12A37A", "#C034D6", "#D9A21B"];
@@ -610,18 +614,18 @@ let saved = store.get("zh-session", SS) || {};
 if (saved.code && saved.at && Date.now() - saved.at > 3*3600e3) saved = {id:saved.id};
 const me = { id: saved.id || Math.random().toString(36).slice(2, 10), name:"", role:"hider", st:"active",
              lat:null, lng:null, acc:null, tags:0, outSince:null, lobbyRole:"hider",
-             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0, walk:0 };
+             lives:1, safeUntil:0, ghostUntil:0, alias:"", inv:[], took:[], fcode:"", away:false, ava:"", av:"", team:0, walk:0, starUntil:0 };
 let code = null, cfg = null, test = false;
 const players = new Map();              // id -> last presence (+ seen)
 const G = { t:0, hunt:false, zi:null, over:false, winner:null, wasHunt:false, announced:0, lastPingIdx:null,
             pings:[], log:[], liveSince:0,
-            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), masks:new Map(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, drop:new Map(), thawTarget:null, shChoices:[] };
+            rats:new Map(), taken:new Map(), pend:new Map(), jamUntil:0, armed:false, shortSince:0, fullWarn:new Set(), masks:new Map(), hist:[], start:new Map(), tracks:new Map(), lastSample:0, replay:null, drop:new Map(), detour:null, tagCd:0, detourLayer:null, thawTarget:null, shChoices:[] };
 const maskOn = id => { const k = G.masks.get(id); return !!k && k.until > Date.now(); };          // disguised as a seeker right now
 const dn = p => me.role !== "seeker" || p.role !== "hider" ? p.name : maskOn(p.id) && G.masks.get(p.id).name ? G.masks.get(p.id).name : p.alias || p.name;   // name swap fools seekers only
 if (QS.has("debug")) window.__zh = {me, G, get cfg(){ return cfg; }, players};
 const isHost = () => cfg && cfg.host === me.id;
 function save(){ store.set("zh-session", {id:me.id, code, test, role:me.role, st:me.st, tags:me.tags, lobbyRole:me.lobbyRole, t0: cfg ? cfg.t0 : null,
-  x:{team:me.team, lives:me.lives, safeUntil:me.safeUntil, ghostUntil:me.ghostUntil, alias:me.alias, inv:me.inv, took:me.took, fcode:me.fcode, walk:me.walk}, at:Date.now()}, SS); }
+  x:{team:me.team, lives:me.lives, safeUntil:me.safeUntil, ghostUntil:me.ghostUntil, alias:me.alias, inv:me.inv, took:me.took, fcode:me.fcode, walk:me.walk, starUntil:me.starUntil}, at:Date.now()}, SS); }
 
 /* ---------------- network ---------------- */
 const N = { client:null, key:null, base:null, onCfg:null };
@@ -677,7 +681,7 @@ let lastPub = 0;
 function pubMe(){
   lastPub = Date.now();
   const p = {t:"p", id:me.id, name:me.name, role:me.role, st:me.st, lat:me.lat, lng:me.lng, acc:me.acc, tags:me.tags, ts:lastPub,
-             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took, wk:Math.round(me.walk)};
+             lives:me.lives, away:me.away, av:me.av, tm:me.team, nInv:me.inv.length, safe:me.safeUntil, ghost:me.ghostUntil, alias:me.alias, took:me.took, wk:Math.round(me.walk), star:me.starUntil};
   applyPresence(p); pub("p/" + me.id, p); save();
 }
 function applyPresence(p){
@@ -723,6 +727,11 @@ function onEvent(m){
       } break;
     case "thawed": rec("thawed", m); addLog(nameOf(m.by) + " unfroze " + nameOf(m.id)); break;
     case "nope": if (m.to === me.id) toast("Wrong code"); break;
+    case "starblock": if (m.to === me.id){ G.tagCd = 0; toast("⭐ " + nameOf(m.id) + " is a Superstar. Tag didn't count"); } break;
+    case "star": addLog("⭐ " + nameOf(m.id) + " is a Superstar for " + cfg.pdur + " s"); break;
+    case "detour": addLog("🚧 A seeker got sent on a detour");
+      if (m.to === me.id && me.role === "seeker"){ G.detour = {lat:m.lat, lng:m.lng, r:m.r, reach:m.reach, stay:m.stay, inSince:0, end:m.reach + m.stay*1000 + 120000};
+        toast("🚧 Detour! Get to the yellow circle and stay " + m.stay + " s. No tagging until then"); follow = false; if (map) map.setView([m.lat, m.lng], Math.min(map.getZoom(), 17)); } break;
     case "take":
       if (!G.taken.has(m.item)){ G.taken.set(m.item, m.from);
         const it = ((cfg && cfg.items) || []).find(i => i.id === m.item);
@@ -806,7 +815,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, premium, powerups:premium, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, tagCd:30, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, premium, powerups:premium, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -846,7 +855,7 @@ function show(which){
 function onPhase(prev){
   const s = store.get("zh-session", SS) || {};
   if (cfg.phase === "lobby"){
-    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; me.alias = ""; me.ghostUntil = 0; me.safeUntil = 0; me.inv = []; me.took = []; me.walk = 0; pubMe(); }
+    if (prev && prev !== "lobby"){ me.role = me.lobbyRole || me.role; me.st = "active"; me.tags = 0; me.alias = ""; me.ghostUntil = 0; me.safeUntil = 0; me.inv = []; me.took = []; me.walk = 0; me.starUntil = 0; G.detour = null; G.tagCd = 0; pubMe(); }
     else if (prev === null && s.code === code && s.role){ me.role = s.role; if (s.x && s.x.team != null) me.team = s.x.team; }
     $("#endWrap").hidden = true; userMoved = false; show("lobby"); renderLobby(true);
   } else {
@@ -870,11 +879,11 @@ function onPhase(prev){
 /* ---------------- lobby ---------------- */
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
             ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
-            ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"]];
+            ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"], ["sTagCd","oTagCd","tagCd", v => v ? v + " s" : "Off"]];
 const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"], ["cReplay","replay"], ["cTeams","teams"], ["cTeamVis","teamVis"]];
 SL.push(["sTeams","oTeams","nTeams", v => v + " teams"]);
 SL.push(["sPlim","oPlim","plimit", v => v + " in play"]);
-const poolTypes = () => Object.keys(ITEMS).filter(k => !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
+const poolTypes = () => Object.keys(ITEMS).filter(k => !((k === "star" || k === "detour") && cfg.mode === "sardines") && !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
 const dropIn = (z, lo, span) => { const a = Math.random()*Math.PI*2, d = (lo + span*Math.sqrt(Math.random()))*z.r; return offset(z, Math.cos(a)*d, Math.sin(a)*d); };
 SL.push(["sSeek","oSeek","nSeekers", v => v + (v == 1 ? " seeker" : " seekers")]);
 let revT = [];
@@ -1114,6 +1123,13 @@ const PUDEMOS = {                            // one tiny scene per power-up
   swap: u => ({z:[150, 80, 70], ping: u >= .4 && u < .7 ? ((u - .4)/.3*2) % 1 : -1,
     note: u < .25 ? "John puts on Jacob's name" : u < .4 ? "Now seekers see him as Jacob" : u < .7 ? "Ping! Sam's map shows two Jacobs" : "Sam can't tell who is who",
     ents:[["John","h",[[0,105,58]],{label: u < .25 ? "John 🎭" : "Jacob"}], ["Jacob","h",[[0,198,62]]], ["Sam","s",[[0,150,95]]]]}),
+  star: u => { const on = u >= .25 && u < .85;
+    return {z:[150, 80, 70], note: u < .25 ? "Sam is about to tag John" : u < .55 ? "John uses Superstar ⭐" : on ? "Sam tags him. It doesn't count" : "Superstar wears off. Run!",
+      ents:[["John","h",[[0,110,62],[.85,118,66],[1,200,110]],{label: on ? "John ⭐" : "John"}], ["Sam","s",[[0,190,105],[.25,130,72],[.85,124,70],[1,160,92]]]]}; },
+  detour: u => { const on = u >= .2;
+    return {z:[150, 80, 70], circ: on ? [[220, 112, 14]] : [],
+      note: u < .2 ? "Sam is closing in on John" : u < .7 ? "John uses Detour. Only Sam sees the yellow circle" : "Sam has to wait inside. No tagging yet",
+      ents:[["John","h",[[0,100,60],[1,96,58]]], ["Sam","s",[[0,150,78],[.2,122,68],[.7,218,110],[1,220,112]],{sub: u >= .7 ? "🚧 wait" : ""}]]}; },
   mask: u => { const sk = u >= .55 && u < .92;
     return {z:[150, 80, 70], ping: u >= .22 && u < .42 ? (u - .22)/.2 : -1,
       note: u < .12 ? "John disguises himself as Jacob" : u < .45 ? "Ping! Sam's map shows two Jacobs" : u < .55 ? "Next, John picks Sam the seeker" : sk ? "Now John looks like a second Sam" : "The seeker disguise wears off",
@@ -1130,6 +1146,7 @@ function drawScene(cv, d, u){
   for (const [icon, ix, iy] of d.items || []){ x.beginPath(); x.arc(ix, iy, 9, 0, Math.PI*2); x.fillStyle = "#fff"; x.fill(); x.strokeStyle = cZ; x.lineWidth = 1.5; x.stroke();
     x.font = "10px sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText(icon, ix, iy + 3.5); }
   for (const r of d.rings || []) ringAt(r[0], r[1], r[2], r[3]);
+  for (const [cx, cy, cr] of d.circ || []){ x.beginPath(); x.arc(cx, cy, cr, 0, Math.PI*2); x.fillStyle = "rgba(242,183,5,.3)"; x.fill(); x.setLineDash([4, 3]); x.strokeStyle = "#F2B705"; x.lineWidth = 2; x.stroke(); x.setLineDash([]); }
   for (const [name, kind, pos, o = {}] of d.ents){
     if (kind === "n") continue;
     const [px, py] = Array.isArray(pos[0]) ? along(pos, u) : pos;
@@ -1223,9 +1240,14 @@ function canSee(p){
 function nearestOf(role){ let best = null, bd = Infinity; const now = Date.now();
   for (const p of players.values()){ if (p.id === me.id || p.role !== role || p.st !== "active" || now - p.seen > STALE || (p.role !== me.role && p.ghost > now) || (role === "hider" && me.role === "seeker" && maskOn(p.id))) continue; const d = dist(me, p); if (d < bd){ bd = d; best = p; } }
   return best ? {p:best, d:bd} : null; }
+function hidersInReach(){ const now = Date.now(), out = [];      // every hider close enough to tag, nearest first
+  for (const p of players.values()){ if (p.id === me.id || p.role !== "hider" || p.st !== "active" || now - p.seen > STALE || p.ghost > now || (me.role === "seeker" && maskOn(p.id))) continue;
+    const d = dist(me, p); if (d <= tagR()) out.push({p, d}); }
+  return out.sort((a, b) => a.d - b.d).map(x => x.p); }
 const canBeHit = () => cfg && cfg.phase === "live" && me.role === "hider" && me.st === "active" && G.hunt;
 function loseLife(by){                       // a seeker's Tag button: costs one life, then you get escape time
   if (!canBeHit() || Date.now() < me.safeUntil) return;
+  if (me.starUntil > Date.now()){ ev({t:"starblock", to:by, id:me.id}); return; }
   if (me.lives <= 1) return gotCaught(by);
   me.lives--; me.safeUntil = Date.now() + cfg.grace*1000;
   toast("Tagged! " + cfg.grace + " s to get away"); ev({t:"hit", id:me.id, by, left:me.lives}); pubMe();
@@ -1339,6 +1361,10 @@ function tick(){
     if (k === 1 && !was) addLog(p.name + " lost connection · " + fmt((DROP - gone)/1000) + " to come back");
     else if (k === 2) addLog(p.name + " is out: lost connection (can still rejoin)");
     else if (!k) addLog(p.name + " reconnected"); }
+  if (G.detour){ const d = G.detour;
+    if (me.role !== "seeker" || me.st !== "active" || cfg.phase !== "live" || now > d.end){ G.detour = null; }
+    else if (dist(me, d) <= d.r + Math.min(me.acc || 0, 10)){ d.inSince = d.inSince || now; if (now - d.inSince >= d.stay*1000){ G.detour = null; toast("Detour done. You can tag again"); } }
+    else d.inSince = 0; }
   const t = G.t = (now - cfg.t0)/1000, end = cfg.head + cfg.minutes*60;
   G.hunt = t >= cfg.head; G.zi = zoneAt(t);
   if (cfg.phase === "live"){
@@ -1411,6 +1437,8 @@ function hud(t, end){
     else if (me.outSince && G.hunt){ kind = "zone";
       txt = me.role === "seeker" ? "Outside the zone · get back in" : cfg.mode === "zone" ? "Outside the zone · out in " + fmt(OUT_GRACE - (Date.now() - me.outSince)/1000) : "Outside the zone · seekers can see you"; }
     else if (me.role === "hider" && G.hunt){ const n = nearestOf("seeker"); if (n && n.d <= ALERT){ kind = "danger"; txt = "Seeker nearby · " + Math.round(n.d) + " m"; } }
+    else if (me.role === "seeker" && G.detour){ const d = G.detour, n = Date.now(); kind = "zone";
+      txt = d.inSince ? "🚧 Stay in the yellow circle · " + fmt(d.stay - (n - d.inSince)/1000) : n < d.reach ? "🚧 Detour! Get to the yellow circle · " + fmt((d.reach - n)/1000) + " · " + Math.round(dist(me, d)) + " m" : "🚧 Late! Get to the yellow circle to tag again · " + Math.round(dist(me, d)) + " m"; }
     else if (me.role === "seeker"){
       if (!G.hunt){ kind = "zone"; txt = "Stay at base · released in " + fmt(cfg.head - t); }
       else { const n = nearestOf("hider"); if (n && canSee(n.p) && n.d <= sight()*1.6){ kind = "spot"; txt = n.d <= tagR() ? (cfg.mode === "sardines" ? "You found " + dn(n.p) + "! Hide with them" : "In reach · tag " + dn(n.p) + "!") : "Hider spotted · " + Math.round(n.d) + " m"; } }
@@ -1418,17 +1446,25 @@ function hud(t, end){
   }
   const al = $("#alert"); al.hidden = !txt; al.textContent = txt; al.className = "over alert " + kind;
 
-  const reach = nearestOf("hider"), tb = $("#tagBtn"), inR = !!(reach && reach.d <= tagR() && G.hunt), safe = inR && reach.p.safe > Date.now();
+  const reach = nearestOf("hider"), tb = $("#tagBtn"), inR = !!(reach && reach.d <= tagR() && G.hunt), tn = Date.now(), inReach = G.hunt ? hidersInReach() : [];
+  const ok = inReach.filter(p => !(p.safe > tn) && !(p.star > tn)), cdLeft = Math.max(0, G.tagCd - tn), cdLen = (cfg.tagCd || 0)*1000;
   tb.hidden = !(me.role === "seeker" && me.st === "active") || over || cfg.mode === "sardines";
   const pk = $("#packBtn"); pk.hidden = !(cfg.mode === "sardines" && me.role === "seeker" && me.st === "active") || over; pk.disabled = !inR;
-  tb.disabled = !inR || safe;
-  tb.textContent = safe ? dn(reach.p) + " is safe " + fmt((reach.p.safe - Date.now())/1000) : inR ? "Tag " + dn(reach.p) : "Tag hider";
+  tb.disabled = !ok.length || cdLeft > 0 || !!G.detour; tb.classList.toggle("cool", cdLeft > 0 && !G.detour);
+  tb.style.setProperty("--fill", cdLeft > 0 && cdLen ? (100 - cdLeft/cdLen*100).toFixed(1) + "%" : "100%");
+  const near = inReach[0];
+  tb.textContent = G.detour ? "🚧 Detour first" : cdLeft > 0 ? "Tag again in " + fmt(cdLeft/1000)
+    : ok.length > 1 ? "Tag… (" + ok.length + " in reach)" : ok.length ? "Tag " + dn(ok[0])
+    : near && near.star > tn ? "⭐ " + dn(near) + " can't be tagged " + fmt((near.star - tn)/1000)
+    : near && near.safe > tn ? dn(near) + " is safe " + fmt((near.safe - tn)/1000) : "Tag hider";
+  const starOn = me.role === "hider" && me.starUntil > tn, cb = $("#caughtBtn"); cb.disabled = starOn;
+  cb.textContent = starOn ? "⭐ Superstar " + fmt((me.starUntil - tn)/1000) + " · real-life tags don't count" : "I got caught";
   const hid = me.role === "hider" && me.st === "active" && !over, nowH = Date.now();
   $("#hearts").innerHTML = me.role === "hider" && !over && cfg.mode !== "sardines" ? "♥".repeat(Math.max(0, me.lives)) + "<s>" + "♥".repeat(Math.max(0, cfg.lives - me.lives)) + "</s>" : "";
   const isig = hid ? me.inv.join() : "-";
   if (isig !== invSig){ invSig = isig; $("#inv").innerHTML = hid ? me.inv.map((k, i) => '<button class="pu" type="button" data-i="' + i + '">' + ITEMS[k].icon + " " + ITEMS[k].name + "</button>").join("") : ""; }
   $("#buffs").textContent = [teamsOn() && me.role === "hider" && !over ? tinfo(me.team % cfg.nTeams).icon + " Team " + tinfo(me.team % cfg.nTeams).name : "",
-                             hid && maskOn(me.id) ? "🥸 Disguised as " + (G.masks.get(me.id).name || "a seeker") + " " + fmt((G.masks.get(me.id).until - nowH)/1000) : "", hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.alias ? "🥸 Seekers see you as " + me.alias : "",
+                             hid && maskOn(me.id) ? "🥸 Disguised as " + (G.masks.get(me.id).name || "a seeker") + " " + fmt((G.masks.get(me.id).until - nowH)/1000) : "", hid && me.ghostUntil > nowH ? "👻 Invisible " + fmt((me.ghostUntil - nowH)/1000) : "", hid && me.starUntil > nowH ? "⭐ Superstar " + fmt((me.starUntil - nowH)/1000) : "", hid && me.alias ? "🥸 Seekers see you as " + me.alias : "",
                              hid && G.rats.get(me.id) > nowH ? "🐀 Exposed " + fmt((G.rats.get(me.id) - nowH)/1000) : ""].filter(Boolean).join(" · ");
   const fzn = hid && cfg.mode === "freeze" ? nearestFrozen() : null, th = $("#thawBtn");
   G.thawTarget = fzn; th.hidden = !fzn; if (fzn) th.textContent = "Unfreeze " + fzn.name;
@@ -1467,6 +1503,8 @@ function fitZone(){ const z = cfg && (cfg.phase === "lobby" ? curZones().cur : c
 function setCircle(layer, z){ if (!z){ layer.remove(); return; } layer.setLatLng([z.lat, z.lng]); layer.setRadius(z.r); if (!map.hasLayer(layer)) layer.addTo(map); }
 function renderMap(){
   if (!map || !cfg) return;
+  if (!G.detourLayer) G.detourLayer = L.circle([0, 0], {radius:1, color:"#F2B705", weight:3, fillColor:"#F2B705", fillOpacity:.25, dashArray:"6 5", interactive:false});
+  setCircle(G.detourLayer, G.detour);
   const {cur, next} = curZones();
   setCircle(Lz, cur); setCircle(Ln, next);
   const key = cur ? [cur.lat.toFixed(6), cur.lng.toFixed(6), cur.r.toFixed(1)].join() : "";
@@ -1538,7 +1576,12 @@ $("#shareBtn").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text + " " + url); $("#shareBtn").textContent = "Link copied"; } catch(e){ $("#shareBtn").textContent = code; }
   setTimeout(() => $("#shareBtn").textContent = "Share invite", 1800);
 });
-$("#tagBtn").addEventListener("click", () => { const n = nearestOf("hider"); if (n && n.d <= tagR() && G.hunt){ ev({t:"tag", to:n.p.id}); toast("Tagging " + n.p.name + "…"); } });
+$("#tagBtn").addEventListener("click", async () => {
+  const now = Date.now(); if (!G.hunt || G.detour || G.tagCd > now) return;
+  let ok = hidersInReach().filter(p => !(p.safe > now) && !(p.star > now)); if (!ok.length) return;
+  if (ok.length > 1){ const c = await sheet("Who are you tagging?", ok.map(p => dn(p))); if (!c) return; ok = ok.filter(p => dn(p) === c); }
+  const p = ok[0]; if (!p || G.tagCd > Date.now()) return;
+  ev({t:"tag", to:p.id}); toast("Tagging " + dn(p) + "…"); if (cfg.tagCd) G.tagCd = Date.now() + cfg.tagCd*1000; tick(); });
 $("#caughtBtn").addEventListener("click", () => gotCaught(null));
 $("#mapBtn").addEventListener("click", () => { $("#endWrap").hidden = true; $("#resBtn").hidden = false; follow = false; fitZone(); renderMap(); });
 $("#resBtn").addEventListener("click", () => { G.replay = null; $("#replayClock").hidden = true; $("#resBtn").hidden = true; $("#endWrap").hidden = false; renderMap(); });
@@ -1568,6 +1611,12 @@ $("#inv").addEventListener("click", async e => {
   const k = me.inv[+b.dataset.i], until = Date.now() + cfg.pdur*1000;
   if (k === "jam"){ ev({t:"jam", until}); spend(k); toast("Seekers jammed for " + cfg.pdur + " s"); }
   else if (k === "ghost"){ me.ghostUntil = until; spend(k); toast("Invisible for " + cfg.pdur + " s"); }
+  else if (k === "star"){ me.starUntil = until; ev({t:"star", id:me.id, until}); spend(k); toast("⭐ Superstar! Tags don't count for " + cfg.pdur + " s"); }
+  else if (k === "detour"){
+    const sk = nearestOf("seeker"), z = G.zi && G.zi.cur; if (!sk || !z) return toast("No seeker to send away");
+    const r = 20; let best = null, bd = -1;
+    for (let i = 0; i < 24; i++){ const a = Math.random()*Math.PI*2, rr = Math.sqrt(Math.random())*Math.max(0, z.r - r), c = offset(z, Math.cos(a)*rr, Math.sin(a)*rr), d = dist(me, c); if (d > bd){ bd = d; best = c; } }
+    ev({t:"detour", to:sk.p.id, lat:best.lat, lng:best.lng, r, reach: Date.now() + 60000, stay: cfg.pdur}); spend(k); toast("🚧 Sent " + dn(sk.p) + " on a detour"); }
   else if (k === "rat"){
     const hs = otherPlayers().filter(p => p.role === "hider" && p.st === "active"); if (!hs.length) return toast("Nobody to rat out");
     const c = await sheet("Rat out which hider?", hs.map(p => p.name)), target = hs.find(p => p.name === c);
