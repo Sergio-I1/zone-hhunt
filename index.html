@@ -56,6 +56,21 @@ button{cursor:pointer;touch-action:manipulation}
 .msg.err{color:var(--seeker);font-weight:600}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
 .check input{margin-top:3px;accent-color:var(--accent)}
+.puon{margin-left:auto;align-self:center;width:22px;height:22px;flex:none;accent-color:var(--accent)}
+#home{position:relative}
+#homeBg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.homein{position:relative;z-index:1;min-height:calc(100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));grid-template-rows:auto 1fr auto auto;max-width:480px}
+.homecard{align-self:end}
+.homecard .msg:empty{display:none}
+.homein .brand h1{text-shadow:0 2px 18px var(--bg),0 0 4px var(--bg)}
+.homein .brand p{color:var(--ink);font-weight:600;text-shadow:0 1px 8px var(--bg),0 0 3px var(--bg)}
+.homecard{display:grid;gap:12px;padding:16px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 12px 36px rgba(0,0,0,.18)}
+.homecard .text{font-size:17px;padding:14px}
+.joinbig{width:auto;background:var(--seeker);color:#fff;font-size:22px;padding:12px 22px}
+.more{justify-self:center;width:100%;font-size:13px;color:var(--muted)}
+.more>summary{cursor:pointer;text-align:center;font-weight:600;padding:6px;list-style:none;text-shadow:0 1px 6px var(--bg)}
+.more>summary::-webkit-details-marker{display:none}
+.moreb{display:grid;gap:12px;margin-top:8px;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
 
 .codebar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
 .codebar .code{font-family:var(--font-mono);font-weight:700;font-size:30px;letter-spacing:.14em;line-height:1}
@@ -238,7 +253,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .pugrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
 .pugrid .demo{position:sticky;top:8px}
 @media (max-width:560px){.pugrid{grid-template-columns:1fr}.pugrid .demo{order:-1}}
-.pulist li.purow{cursor:pointer;display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:10px;padding:6px;font-size:13.5px;color:var(--muted)}
+.pulist li.purow{cursor:pointer;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:10px;padding:6px;font-size:13.5px;color:var(--muted)}
 .pulist li.purow[aria-pressed="true"]{border-color:var(--zone);background:var(--surface-2)}
 .avarow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .avaprev{width:44px;height:44px;border-radius:50%;border:3px solid var(--hider);background:var(--hider) center/cover;flex:none}
@@ -293,45 +308,50 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
   <!-- HOME -->
   <section class="page" id="home">
-    <div class="inner">
+    <canvas id="homeBg" aria-hidden="true"></canvas>
+    <div class="inner homein">
       <header class="brand">
         <h1>Zone <span>Hunt</span></h1>
-        <p>Real-life hide-and-seek on a live map. One person creates a game, everyone else joins with the code.</p>
+        <p>Hide-and-seek on a live map.</p>
       </header>
-      <div class="field">
-        <label class="lbl" for="nameIn">Your name</label>
-        <input class="text" id="nameIn" maxlength="16" autocomplete="off" placeholder="What should friends see?">
+      <div class="homecard">
+        <input class="text" id="nameIn" maxlength="16" autocomplete="off" placeholder="Your name" aria-label="Your name">
+        <button class="big" id="createBtn" type="button">Create game</button>
+        <button class="ghost" id="ownBtn" type="button" hidden>Create my own game instead</button>
+        <div class="or" id="orRow">or join a friend</div>
+        <div class="joinrow" id="joinRow">
+          <input class="text" id="codeIn" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code">
+          <button class="big joinbig" id="joinBtn" type="button">Join</button>
+        </div>
+        <p class="msg" id="homeMsg"></p>
       </div>
-      <button class="big" id="createBtn" type="button">Create a game</button>
-      <button class="ghost" id="ownBtn" type="button" hidden>Create my own game instead</button>
-      <div class="or" id="orRow">or join one</div>
-      <div class="joinrow" id="joinRow">
-        <input class="text" id="codeIn" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Game code">
-        <button class="ghost" id="joinBtn" type="button">Join</button>
-      </div>
-      <p class="msg" id="homeMsg"></p>
-      <details class="ver">
-        <summary>Version 3 · what's new</summary>
-        <ul>
-          <li>Power-up limit: a set number are always in play. When one is used, a new one appears.</li>
-          <li>Stacking switch: let hiders hold several power-ups, or only one at a time.</li>
-          <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
-          <li>Caught hiders drop any power-ups they were holding.</li>
-          <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
-          <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
-          <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
-          <li>Classic and Manhunt are free. A one-time unlock in the app adds 4 more modes and power-ups, and only the host needs it.</li>
-          <li>QR code in the lobby: scan it to join without typing the game code.</li>
-          <li>Teams: split hiders into 2 to 4 teams with their own colors, names and icons.</li>
-          <li>Disguise power-up: make any hider look like any other player, even a seeker.</li>
-          <li>Photo icons: take a picture in the lobby and it replaces your dot on the map.</li>
-          <li>Tap a power-up under Advanced settings to watch an example of it.</li>
-          <li>Phone screen examples for tagging, getting tagged and using a power-up.</li>
-          <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
-        </ul>
+      <details class="more">
+        <summary>More</summary>
+        <div class="moreb">
+          <details class="ver">
+            <summary>Version 3 · what's new</summary>
+            <ul>
+              <li>Power-up limit: a set number are always in play. When one is used, a new one appears.</li>
+              <li>Stacking switch: let hiders hold several power-ups, or only one at a time.</li>
+              <li>Simpler lobby: the main settings up front, the rest under Advanced settings.</li>
+              <li>Caught hiders drop any power-ups they were holding.</li>
+              <li>Animated example of each game mode in the lobby, next to previews of the hider's and seeker's screens.</li>
+              <li>New mode: Sardines. One hider, and everyone who finds them hides too.</li>
+              <li>Results page: a game-over flash with your stats, a table of everyone, a map of where people were caught, and a time-lapse replay.</li>
+              <li>Classic and Manhunt are free. A one-time unlock in the app adds 4 more modes and power-ups, and only the host needs it.</li>
+              <li>QR code in the lobby: scan it to join without typing the game code.</li>
+              <li>Teams: split hiders into 2 to 4 teams with their own colors, names and icons.</li>
+              <li>Disguise power-up: make any hider look like any other player, even a seeker.</li>
+              <li>Photo icons: take a picture in the lobby and it replaces your dot on the map.</li>
+              <li>Tap a power-up under Advanced settings to watch an example of it.</li>
+              <li>Phone screen examples for tagging, getting tagged and using a power-up.</li>
+              <li>Players whose phone locks or leaves the page show as asleep (💤) at their last spot, and pick back up when they return.</li>
+            </ul>
+          </details>
+          <p class="msg"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
+          <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
+        </div>
       </details>
-      <p class="msg"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
-      <label class="check"><input type="checkbox" id="testChk"> <span>Test mode: no GPS, tap the map to move. Good for trying it at your desk with two browser tabs.</span></label>
     </div>
   </section>
 
@@ -440,7 +460,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
                 <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div>
               </div>
               <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups.</b> Off means a hider can hold only one at a time.</span></label>
-              <h3>What each power-up does</h3>
+              <h3>Which power-ups are in this game</h3>
               <p class="msg" id="puHint"></p>
               <div class="pugrid">
                 <ul class="pulist" id="puList"></ul>
@@ -847,7 +867,7 @@ function leave(){
 let map = null, follow = true, userMoved = false;
 function show(which){
   for (const id of ["home", "lobby", "game"]) $("#" + id).hidden = id !== which;
-  if (which === "home") return;
+  if (which === "home") return homeBg.start();
   if (!map) initMap();
   $(which === "lobby" ? "#slotLobby" : "#slotGame").appendChild($("#map"));
   setTimeout(() => { map.invalidateSize(); fitZone(); }, 60);
@@ -883,7 +903,7 @@ const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head",
 const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"], ["cReplay","replay"], ["cTeams","teams"], ["cTeamVis","teamVis"]];
 SL.push(["sTeams","oTeams","nTeams", v => v + " teams"]);
 SL.push(["sPlim","oPlim","plimit", v => v + " in play"]);
-const poolTypes = () => Object.keys(ITEMS).filter(k => !((k === "star" || k === "detour") && cfg.mode === "sardines") && !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
+const poolTypes = () => Object.keys(ITEMS).filter(k => !(cfg.puOff || []).includes(k) && !((k === "star" || k === "detour") && cfg.mode === "sardines") && !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
 const dropIn = (z, lo, span) => { const a = Math.random()*Math.PI*2, d = (lo + span*Math.sqrt(Math.random()))*z.r; return offset(z, Math.cos(a)*d, Math.sin(a)*d); };
 SL.push(["sSeek","oSeek","nSeekers", v => v + (v == 1 ? " seeker" : " seekers")]);
 let revT = [];
@@ -935,6 +955,7 @@ function renderLobby(force){
   const noPing = cfg.mode === "manhunt"; $("#pingWrap").classList.toggle("off", noPing); $("#sPing").disabled = noPing;
   for (const [cid, key] of CK) $("#" + cid).checked = !!cfg[key];
   $("#powAdv").classList.toggle("off", !cfg.powerups); for (const id of ["sPlim", "sPdur", "cStack"]) $("#" + id).disabled = !host || !cfg.powerups;
+  for (const c of document.querySelectorAll(".puon")){ c.checked = !(cfg.puOff || []).includes(c.dataset.k); c.disabled = !host || !cfg.powerups; }
   for (const el of document.querySelectorAll(".powlock")) el.hidden = !!cfg.premium; $("#graceWrap").classList.toggle("off", cfg.lives < 2 && cfg.mode !== "freeze");
   $("#refillWrap").hidden = cfg.mode !== "freeze";
   setMock();
@@ -1550,7 +1571,7 @@ function renderMap(){
 
 /* ---------------- buttons ---------------- */
 let invite = null;                           // set when the page was opened from a QR code or invite link
-function setInvite(c){ invite = c; $("#createBtn").textContent = c ? "Join game " + c : "Create a game"; $("#ownBtn").hidden = !c; $("#orRow").hidden = !!c; $("#joinRow").hidden = !!c;
+function setInvite(c){ invite = c; $("#createBtn").textContent = c ? "Join game " + c : "Create game"; $("#ownBtn").hidden = !c; $("#orRow").hidden = !!c; $("#joinRow").hidden = !!c;
   if (c) homeMsg("You've been invited to game " + c + ". Type your name and tap Join."); }
 $("#createBtn").addEventListener("click", () => invite ? joinGame(invite) : createGame());
 $("#ownBtn").addEventListener("click", () => { setInvite(null); homeMsg(""); });
@@ -1649,15 +1670,81 @@ $("#againBtn").addEventListener("click", () => { if (isHost()) hostSet({phase:"l
 $("#meBtn").addEventListener("click", () => { follow = true; if (me.lat != null) map.setView([me.lat, me.lng], Math.max(map.getZoom(), 17)); });
 $("#fitBtn").addEventListener("click", () => { follow = false; fitZone(); });
 
+/* ---------------- home background: a pretend game running behind the buttons ---------------- */
+const homeBg = (() => {
+  const cv = $("#homeBg"), x = cv.getContext("2d"), still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0, H = 0, roads = [], parks = [], ags = [], run = false, t0 = performance.now(), last = 0, pings = [];
+  const rnd = (a, b) => a + Math.random()*(b - a);
+  function layout(){
+    const d = Math.min(2, devicePixelRatio || 1); measure(); W = innerWidth; H = innerHeight; cv.width = W*d; cv.height = H*d; x.setTransform(d, 0, 0, d, 0, 0);
+    roads = []; const g = 70 + Math.random()*20, tilt = rnd(-.12, .12);
+    for (let y = rnd(-20, 40); y < H + 60; y += g*rnd(.8, 1.4)) roads.push([[-40, y], [W + 40, y + W*tilt], rnd(5, 11)]);
+    for (let xx = rnd(-20, 40); xx < W + 60; xx += g*rnd(.9, 1.6)) roads.push([[xx, -40], [xx - H*tilt, H + 40], rnd(5, 11)]);
+    roads.push([[-40, H*rnd(.2, .5)], [W + 40, H*rnd(.6, 1)], 13]);
+    parks = Array.from({length:3}, () => [rnd(0, W), rnd(0, H), rnd(40, 90)]);
+    const names = [["John","h"],["Ana","h"],["Bo","h"],["Mia","h"],["Sam","s"],["Leo","s"]];
+    ags = names.map(([n, k]) => ({n, k, ...spot(.8), tx:0, ty:0, sp: k === "s" ? 26 : 30})); ags.forEach(newT);
+  }
+  let gap = null;                       // the open strip of map between the title and the buttons
+  function measure(){ const a = $("#home .brand").getBoundingClientRect(), b = $("#home .homecard").getBoundingClientRect();
+    gap = b.top > a.bottom + 60 ? {y:(a.bottom + b.top)/2, h:b.top - a.bottom} : {y:H*.4, h:H*.5}; }
+  const zone = () => { const c = (performance.now() - t0)/1000 % 26, g = gap || {y:H*.4, h:H*.5}, R0 = Math.max(70, Math.min(W*.46, g.h*.55)), f = Math.min(1, c/22);
+    return {x:W/2, y:g.y, r:R0*(1 - .5*f), next:R0*(1 - .5*Math.min(1, f + .25)), c}; };
+  function spot(k){ const z = zone(), a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*z.r*k; return {x:z.x + Math.cos(a)*r, y:z.y + Math.sin(a)*r}; }
+  function newT(a){ const p = spot(.85); a.tx = p.x; a.ty = p.y; }
+  function step(dt){
+    const z = zone(), hs = ags.filter(a => a.k === "h");
+    for (const a of ags){
+      if (a.k === "s"){ let best = null, bd = 1e9; for (const h of hs){ const d = Math.hypot(h.x - a.x, h.y - a.y); if (d < bd){ bd = d; best = h; } }
+        if (best && bd < 150){ a.tx = best.x; a.ty = best.y; }
+        if (best && bd < 12){ pings.push({x:best.x, y:best.y, t:0, c:"seeker"}); Object.assign(best, spot(.8)); newT(best); newT(a); } }
+      else { for (const s of ags) if (s.k === "s" && Math.hypot(s.x - a.x, s.y - a.y) < 70){ a.tx = a.x + (a.x - s.x)*1.5; a.ty = a.y + (a.y - s.y)*1.5; } }
+      const dz = Math.hypot(a.tx - z.x, a.ty - z.y); if (dz > z.r*.9){ a.tx = z.x + (a.tx - z.x)*z.r*.85/dz; a.ty = z.y + (a.ty - z.y)*z.r*.85/dz; }
+      const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+      if (d < 4) newT(a); else { const v = a.sp*dt*(a.k === "h" && d > 60 ? 1.2 : 1); a.x += dx/d*Math.min(v, d); a.y += dy/d*Math.min(v, d); }
+    }
+    if (Math.floor(z.c/6) !== Math.floor((z.c - dt)/6)) for (const h of hs) pings.push({x:h.x, y:h.y, t:0, c:"hider"});
+    for (const p of pings) p.t += dt; pings = pings.filter(p => p.t < 1.4);
+  }
+  function draw(){
+    const bg = css("--surface-2"), rd = css("--surface"), ln = css("--line"), zc = css("--zone"), ch = css("--hider"), cs = css("--seeker"), ink = css("--ink"), z = zone();
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    x.fillStyle = "rgba(67,183,131,.16)"; for (const [px, py, pr] of parks){ x.beginPath(); x.ellipse(px, py, pr, pr*.7, .4, 0, Math.PI*2); x.fill(); }
+    x.lineCap = "round";
+    for (const [a, b, w] of roads){ x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.strokeStyle = ln; x.lineWidth = w + 2; x.stroke(); x.strokeStyle = rd; x.lineWidth = w; x.stroke(); }
+    x.beginPath(); x.rect(0, 0, W, H); x.arc(z.x, z.y, z.r, 0, Math.PI*2, true); x.fillStyle = "rgba(60,30,110,.28)"; x.fill("evenodd");
+    x.beginPath(); x.arc(z.x, z.y, z.r, 0, Math.PI*2); x.strokeStyle = zc; x.lineWidth = 3; x.stroke();
+    x.setLineDash([8, 7]); x.beginPath(); x.arc(z.x, z.y, z.next, 0, Math.PI*2); x.lineWidth = 2; x.stroke(); x.setLineDash([]);
+    for (const p of pings){ const f = p.t/1.4; x.beginPath(); x.arc(p.x, p.y, 8 + f*34, 0, Math.PI*2); x.strokeStyle = p.c === "seeker" ? cs : ch; x.globalAlpha = 1 - f; x.lineWidth = 2.5; x.stroke(); x.globalAlpha = 1; }
+    x.font = "700 11px Figtree, system-ui, sans-serif"; x.textAlign = "center";
+    for (const a of ags){
+      x.beginPath(); if (a.k === "s"){ x.moveTo(a.x, a.y - 9); x.lineTo(a.x + 9, a.y); x.lineTo(a.x, a.y + 9); x.lineTo(a.x - 9, a.y); x.closePath(); } else x.arc(a.x, a.y, 7, 0, Math.PI*2);
+      x.fillStyle = a.k === "s" ? cs : ch; x.fill(); x.strokeStyle = "#fff"; x.lineWidth = 2; x.stroke();
+      x.fillStyle = ink; x.globalAlpha = .85; x.fillText(a.n, a.x, a.y - 13); x.globalAlpha = 1;
+    }
+  }
+  function frame(now){ if (!run) return; if ($("#home").hidden){ run = false; return; }
+    const dt = Math.min(.05, (now - (last || now))/1000); last = now; step(dt); draw(); requestAnimationFrame(frame); }
+  addEventListener("resize", () => { layout(); if (!run) draw(); });
+  layout();
+  return { start(){ requestAnimationFrame(() => { measure(); if (still) draw(); }); if (still){ draw(); return; } if (!run){ run = true; last = 0; requestAnimationFrame(frame); } } };
+})();
+
 /* ---------------- boot ---------------- */
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 buildLobbyControls();
-$("#puList").innerHTML = Object.entries(ITEMS).map(([k, it]) => '<li class="purow" role="button" tabindex="0" data-k="' + k + '" aria-pressed="' + (k === puSel) + '"><i>' + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + "</span></li>").join("");
+homeBg.start();
+$("#puList").innerHTML = Object.entries(ITEMS).map(([k, it]) => '<li class="purow" role="button" tabindex="0" data-k="' + k + '" aria-pressed="' + (k === puSel) + '"><i>' + it.icon + "</i><span><b>" + esc(it.name) + ".</b> " + esc(it.desc) + '</span><input type="checkbox" class="puon" data-k="' + k + '" aria-label="Use ' + esc(it.name) + ' in this game"></li>').join("");
+$("#puList").addEventListener("change", e => {          // host picks which power-ups show up on the map
+  const c = e.target.closest(".puon"); if (!c || !isHost()) return;
+  const off = new Set(cfg.puOff || []); c.checked ? off.delete(c.dataset.k) : off.add(c.dataset.k);
+  if (Object.keys(ITEMS).every(k => off.has(k))){ c.checked = true; return toast("Keep at least one power-up on"); }
+  hostSet({puOff:[...off]}); });
 const pickPu = e => { const b = e.target.closest(".purow"); if (!b || b.dataset.k === puSel) return; puSel = b.dataset.k; puT0 = performance.now();
   for (const r of document.querySelectorAll(".purow")) r.setAttribute("aria-pressed", String(r === b)); };
 $("#puList").addEventListener("click", pickPu); $("#puList").addEventListener("pointerover", pickPu);
 $("#puList").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pickPu(e); } });   // rows are not real buttons so players who aren't the host can use them too
-$("#puHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a power-up to see it in action.";
+$("#puHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a power-up to see it in action. Untick any you don't want in this game.";
 $("#mockTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMock(b.dataset.t); });
 const setTeamInfo = (i, patch) => { const ti = [0, 1, 2, 3].map(j => ({...tinfo(j)})); Object.assign(ti[i], patch); hostSet({teamInfo: ti}); };
 $("#teamList").addEventListener("click", e => { const b = e.target.closest(".ticon"); if (!b || !isHost()) return; const i = +b.dataset.i;
