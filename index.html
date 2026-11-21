@@ -175,7 +175,8 @@ fieldset[disabled] .mode:not(:has(input:checked)){opacity:.5}
 .slider output{font-family:var(--font-mono);font-weight:700;font-size:14px}
 .slider small{color:var(--muted);font-size:12.5px}
 input[type=range]{width:100%;accent-color:var(--zone)}
-.slider.off{opacity:.45}
+.slider.off,.check.off{opacity:.42}
+.off[data-why]::after,.off [data-why]::after{content:attr(data-why);display:block;margin-top:2px;font-size:11.5px;font-style:italic;color:var(--muted)}
 
 .game{flex:1;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0}
 .hud{background:var(--surface);border-bottom:1px solid var(--line);padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
@@ -1068,6 +1069,15 @@ function renderLobby(force){
   $("#shuffleBtn").hidden = !host || rnd; $("#centerBtn").hidden = !host;
   const tOn = teamsOn();
   $("#teamBox").hidden = !cfg.teams; for (const id of ["cTeams", "sTeams", "cTeamVis"]) $("#" + id).disabled = !host;
+  { const m = cfg.mode, sard = m === "sardines", wrap = id => $("#" + id).closest(".slider,.check");   // grey out and lock anything that can't apply right now
+    const off = (id, isOff, why) => { const w = wrap(id), tg = w.matches(".check") ? w.querySelector("span") : w; w.classList.toggle("off", isOff); if (isOff) tg.dataset.why = why; else delete tg.dataset.why; $("#" + id).disabled = isOff || !host; };
+    off("sPing", m === "manhunt", "Not used in Manhunt: everyone is always visible.");
+    off("cNames", m === "manhunt", "Not used in Manhunt: there are no pings.");
+    off("sLives", sard, "Not used in Sardines: nobody gets tagged.");
+    off("sGrace", sard || (cfg.lives < 2 && m !== "freeze"), sard ? "Not used in Sardines." : "Only matters with 2 or more lives.");
+    off("sTagCd", sard, "Not used in Sardines: nobody gets tagged.");
+    off("cTeams", sard, "Not used in Sardines: there's only one hider.");
+    off("cPow", !cfg.premium, "🔒 Part of the full unlock."); if (!cfg.premium) $("#cPow").disabled = !host; }
   $("#teamHint").textContent = cfg.mode === "sardines" ? "Sardines has one hider, so teams are off in that mode." : rnd ? "With secret roles on, teams are dealt out at random when the game starts." : "Hiders tap their team tag in the list to switch teams.";
   $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd || cfg.mode === "sardines";
   $("#rosterHint").textContent = rnd ? "roles are revealed when the game starts" : host ? "tap a role to switch it" : "tap your role to switch it";
