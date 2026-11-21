@@ -329,8 +329,16 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mbtn.dim{opacity:.4}
 .mitem{position:absolute;transform:translate(-50%,-50%);font-style:normal;font-size:11px;width:16px;height:16px;border-radius:50%;background:#fff;border:1.5px solid var(--zone);display:grid;place-items:center;animation:mbob 1s ease-in-out infinite alternate}
 @keyframes mbob{to{transform:translate(-50%,-62%)}}
-.mdot{transition:left .08s linear,top .08s linear}
 .mbank i.used{box-shadow:0 0 0 2px var(--zone)}
+.mbank i.pop{animation:mpop .5s ease-out}
+@keyframes mpop{0%{transform:scale(.2)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
+.mitem.near{animation:mpulse .5s ease-in-out infinite alternate}
+@keyframes mpulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.35);box-shadow:0 0 0 4px color-mix(in srgb,var(--zone) 35%,transparent)}}
+.mplus{position:absolute;transform:translate(-50%,-50%);font-style:normal;font-weight:800;font-size:8px;color:var(--zone);background:#fff;padding:1px 4px;border-radius:4px;white-space:nowrap}
+.mdock{position:relative}
+.mtap{position:absolute;right:2px;top:12px;font-style:normal;font-size:13px;animation:mtapk .5s ease-in-out infinite alternate}
+@keyframes mtapk{to{transform:translate(-2px,-4px)}}
+.mbankw{display:grid;justify-items:end;gap:1px}.mbankw small{font-size:5.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .pugrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
 .pugrid .demo{position:sticky;top:8px}
 @media (max-width:560px){.pugrid{grid-template-columns:1fr}.pugrid .demo{order:-1}}
@@ -504,7 +512,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               <div class="mscreen">
                 <div class="mhud"><span><small>Hunt</small>12:40</span><em class="hider">Hider</em></div>
                 <div class="mmap"><i class="mzone"></i><i class="mdot hider you" style="left:44%;top:56%"></i><i class="mdot seeker" style="left:66%;top:34%"></i><b class="malert danger" id="mhAlert">Seeker nearby · 12 m</b><b class="mtoast" id="mhToast" hidden></b></div>
-                <div class="mdock"><div class="mrow"><span class="mhearts" id="mockHearts">♥♥</span><span class="mbank" id="mockBank"><i>📡</i><i>👻</i></span></div><div class="mbtn hider">I got caught</div></div>
+                <div class="mdock"><div class="mrow"><span class="mhearts" id="mockHearts">♥♥</span><span class="mbankw"><small>Power-ups</small><span class="mbank" id="mockBank"><i>📡</i><i>👻</i></span></span></div><div class="mbtn hider">I got caught</div></div>
               </div>
               <figcaption>Hider's screen: lives bottom left, power-ups bottom right</figcaption>
             </figure>
@@ -1320,7 +1328,7 @@ function setMock(tab){
   const hearts = (n, lost) => "♥".repeat(n) + (lost ? "<s>" + "♥".repeat(lost) + "</s>" : "");
   const hA = $("#mhAlert"), sA = $("#msAlert"), sB = $("#msBtn"), hT = $("#mhToast"), jam = $("#msJam"), bank = $("#mockBank");
   hT.hidden = true; jam.hidden = true; sB.classList.remove("dim"); hA.hidden = false; sA.hidden = false; sA.className = "malert spot"; hA.className = "malert danger";
-  bank.hidden = !(cfg && cfg.powerups) && t !== "pow"; bank.firstElementChild.classList.toggle("used", t === "pow");
+  bank.hidden = bank.parentNode.hidden = !(cfg && cfg.powerups) && t !== "pow"; bank.firstElementChild.classList.toggle("used", t === "pow");
   if (t === "tag"){ $("#mockHearts").innerHTML = hearts(L); hA.textContent = "Seeker nearby · 12 m"; sA.textContent = "In reach · tag John!"; sB.textContent = "Tag John"; }
   else if (t === "hit"){ $("#mockHearts").innerHTML = hearts(L - 1, 1);
     hA.textContent = one ? "You got caught" : "Tagged! Get away · safe 0:24"; hT.hidden = false; hT.textContent = one ? "You got caught" : "Tagged! " + (cfg ? cfg.grace : 30) + " s to get away";
@@ -1332,31 +1340,39 @@ let powT = 0, powT0 = 0;                     // "Using a power-up": walk to it, 
 function powMock(on){
   const maps = document.querySelectorAll(".mock .mmap"); if (maps.length < 2) return;
   const [hm, sm] = maps, hYou = hm.querySelector(".mdot.you"), hSk = hm.querySelector(".mdot.seeker"), sYou = sm.querySelector(".mdot.you"), sHd = sm.querySelector(".mdot.hider");
-  let item = hm.querySelector(".mitem"); if (!item){ item = document.createElement("i"); item.className = "mitem"; item.textContent = "📡"; hm.append(item); }
+  const mk = (par, cls, txt) => { let e = par.querySelector("." + cls); if (!e){ e = document.createElement("i"); e.className = cls; e.textContent = txt; par.append(e); } return e; };
+  const item = mk(hm, "mitem", "📡"), plus = mk(hm, "mplus", "+ Jammer"), tap = mk(document.querySelector(".mock .mdock"), "mtap", "👆");
   for (const d of [hYou, hSk, sYou, sHd]) if (!d.dataset.home) d.dataset.home = d.getAttribute("style");
   if (on && powT) return;                   // already playing (the lobby redraws often)
-  clearInterval(powT); powT = 0;
-  if (!on){ for (const d of [hYou, hSk, sYou, sHd]) d.setAttribute("style", d.dataset.home); item.hidden = true; $("#mockBank").innerHTML = "<i>📡</i><i>👻</i>"; return; }
+  cancelAnimationFrame(powT); powT = 0;
+  if (!on){ for (const d of [hYou, hSk, sYou, sHd]){ d.setAttribute("style", d.dataset.home); } item.hidden = plus.hidden = tap.hidden = true; $("#mockBank").innerHTML = "<i>📡</i><i>👻</i>"; return; }
   powT0 = performance.now();
-  const at = (d, x, y) => { d.style.left = x + "%"; d.style.top = y + "%"; }, lerp = (a, b, f) => a + (b - a)*Math.max(0, Math.min(1, f));
+  const ease = f => { f = Math.max(0, Math.min(1, f)); return f*f*(3 - 2*f); }, lerp = (a, b, f) => a + (b - a)*ease(f);
+  const at = (d, x, y) => { d.style.left = x.toFixed(2) + "%"; d.style.top = y.toFixed(2) + "%"; };
+  const L = 11;                             // seconds per loop
   const step = () => {
-    if ($("#lobby").hidden || mockTab !== "pow"){ clearInterval(powT); powT = 0; return; }
-    const sec = ((performance.now() - powT0)/1000) % 9, hA = $("#mhAlert"), hT = $("#mhToast"), sA = $("#msAlert"), jam = $("#msJam"), sB = $("#msBtn"), bank = $("#mockBank");
-    const got = sec >= 2.6, used = sec >= 4.2, jamOn = sec >= 4.4 && sec < 8.4;
-    at(hYou, lerp(30, 64, sec/2.6) + (used ? lerp(0, -22, (sec - 4.4)/3) : 0), lerp(62, 40, sec/2.6) + (used ? lerp(0, 26, (sec - 4.4)/3) : 0));
-    at(hSk, lerp(78, 60, sec/4.2), lerp(24, 38, sec/4.2));
-    item.hidden = got; item.style.left = "64%"; item.style.top = "40%";
-    at(sYou, 50, 54); at(sHd, lerp(66, 58, sec/4.2) + (used ? lerp(0, -18, (sec - 4.4)/3) : 0), lerp(36, 44, sec/4.2) + (used ? lerp(0, 22, (sec - 4.4)/3) : 0));
+    if ($("#lobby").hidden || mockTab !== "pow"){ powT = 0; return; }
+    const sec = ((performance.now() - powT0)/1000) % L, hA = $("#mhAlert"), hT = $("#mhToast"), sA = $("#msAlert"), jam = $("#msJam"), sB = $("#msBtn"), bank = $("#mockBank");
+    const got = sec >= 3.2, used = sec >= 5.4, jamOn = sec >= 5.6 && sec < 10.2, dur = cfg ? cfg.pdur : 30;
+    // hider's screen: you walk up-left to the power-up, far from the seeker who patrols the right side
+    const hx = lerp(46, 30, sec/3.2) + (used ? lerp(0, 18, (sec - 5.6)/3.5) : 0), hy = lerp(70, 36, sec/3.2) + (used ? lerp(0, 34, (sec - 5.6)/3.5) : 0);
+    at(hYou, hx, hy); at(hSk, 74 + Math.sin(sec*.9)*3, 52 + Math.cos(sec*.9)*12);
+    item.hidden = got; at(item, 30, 34); item.classList.toggle("near", sec > 2.4 && !got);
+    plus.hidden = !(sec >= 3.2 && sec < 4.6); at(plus, 30, 22 - (sec - 3.2)*4); plus.style.opacity = sec < 4 ? 1 : Math.max(0, 1 - (sec - 4)/.6);
+    // seeker's screen: the hider shows up far away, then vanishes when the map is jammed
+    at(sYou, 52, 56); at(sHd, lerp(30, 18, sec/3.2) + (used ? lerp(0, 14, (sec - 5.6)/3.5) : 0), lerp(32, 18, sec/3.2));
     sHd.style.opacity = jamOn ? 0 : 1;
-    bank.innerHTML = (got && !used ? '<i class="used">📡</i>' : "") + "<i>👻</i>"; bank.hidden = false;
-    hA.hidden = false; hA.className = "malert " + (sec < 2.6 ? "spot" : "danger");
-    hA.textContent = sec < 2.6 ? "Power-up nearby · walk to it" : !used ? "Got a Jammer! Tap it below" : jamOn ? "Seekers can't see you · run!" : "Jammer wore off";
-    hT.hidden = !(sec >= 4.2 && sec < 5.6); hT.textContent = "📡 Jammed " + (cfg ? cfg.pdur : 30) + " s";
-    sA.hidden = jamOn; sA.className = "malert spot"; sA.textContent = sec < 4.2 ? "Hider spotted · " + Math.round(lerp(30, 9, sec/4.2)) + " m" : "Where did John go?";
-    jam.hidden = !jamOn; jam.textContent = "Signal jammed · " + fmt(Math.max(0, (cfg ? cfg.pdur : 30) - (sec - 4.4)*7));
-    sB.textContent = sec < 4.2 && sec > 3 ? "Tag John" : "Tag hider"; sB.classList.toggle("dim", !(sec < 4.2 && sec > 3));
+    bank.innerHTML = (got && !used ? '<i class="' + (sec < 3.8 ? "pop" : "used") + '">📡</i>' : "") + "<i>👻</i>"; bank.hidden = false;
+    tap.hidden = !(sec >= 4.2 && sec < 5.5);
+    hA.hidden = false; hA.className = "malert " + (used && sec < 10.2 ? "danger" : "spot");
+    hA.textContent = sec < 3.2 ? "📡 Walk to the power-up · " + Math.max(0, Math.round(lerp(24, 0, sec/3.2))) + " m" : !used ? "Got it! Tap it to use it" : sec < 10.2 ? "Seekers can't see you · run!" : "Jammer wore off";
+    hT.hidden = !(sec >= 5.4 && sec < 6.8); hT.textContent = "📡 Jammed " + dur + " s";
+    sA.hidden = jamOn; sA.className = "malert spot"; sA.textContent = sec < 5.4 ? "Hider spotted · 60 m" : "Where did John go?";
+    jam.hidden = !jamOn; jam.textContent = "Signal jammed · " + fmt(Math.max(0, dur - (sec - 5.6)*dur/4.6));
+    sB.textContent = "Tag hider"; sB.classList.add("dim");
+    powT = requestAnimationFrame(step);
   };
-  step(); powT = setInterval(step, 80);
+  powT = requestAnimationFrame(step);
 }
 
 /* ---------------- photo icons ---------------- */
