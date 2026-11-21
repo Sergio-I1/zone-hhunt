@@ -362,8 +362,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 @media (max-width:560px){.pugrid{grid-template-columns:1fr}.pugrid .demo{order:-1}}
 .pulist li.purow{cursor:pointer;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:1.5px solid transparent;border-radius:10px;padding:6px;font-size:13.5px;color:var(--muted)}
 .pulist li.purow[aria-pressed="true"]{border-color:var(--zone);background:var(--surface-2)}
-.avarow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.avaprev{width:44px;height:44px;border-radius:50%;border:3px solid var(--hider);background:var(--hider) center/cover;flex:none}
+.avarow{display:flex;flex-wrap:nowrap;gap:6px;align-items:center}
+.avarow .ghost{padding:8px 10px;font-size:14px;white-space:nowrap;flex:0 1 auto;min-width:0}
+.avaprev{width:38px;height:38px;border-radius:50%;border:3px solid var(--hider);background:var(--hider) center/cover;flex:none}
 .pava{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none;display:block}
 .pm.pic i{width:32px;height:32px;border-radius:50%;border:3px solid var(--hider);background-size:cover;background-position:center;transform:none}
 .pm.pic.seeker i{border-color:var(--seeker);border-radius:9px;transform:none}
@@ -492,8 +493,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <div class="roster" id="roster"></div>
         <div class="avarow">
           <span class="avaprev" id="avaPrev" aria-hidden="true"></span>
-          <button class="ghost" type="button" id="avaBtn">📷 My photo</button>
-          <button class="ghost" type="button" id="avaClear" hidden>Remove photo</button>
+          <button class="ghost" type="button" id="avaBtn">📷 Photo</button>
+          <button class="ghost" type="button" id="avaClear" hidden>✕ Remove</button>
           <button class="ghost" type="button" id="frameBtn">🎁 Frames</button>
           <input type="file" id="avaIn" accept="image/*" capture="user" hidden>
         </div>
@@ -1408,7 +1409,7 @@ function setMyAva(img){
   if (me.ava){ avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } else { avatars.delete(me.id); avaKey.delete(me.id); }
   store.set("zh-ava", me.ava); showMyAva(); if (N.client){ pubMe(); sendAva(); renderLobby(true); }
 }
-function showMyAva(){ const pv = $("#avaPrev"); pv.style.backgroundImage = me.ava ? "url(" + me.ava + ")" : ""; $("#avaClear").hidden = !me.ava; $("#avaBtn").textContent = me.ava ? "📷 Retake" : "📷 My photo"; }
+function showMyAva(){ const pv = $("#avaPrev"); pv.style.backgroundImage = me.ava ? "url(" + me.ava + ")" : ""; $("#avaClear").hidden = !me.ava; $("#avaBtn").textContent = me.ava ? "📷 Retake" : "📷 Photo"; }
 function sendAva(){ if (me.ava && Date.now() - avaSent > 1500){ avaSent = Date.now(); ev({t:"ava", id:me.id, av:me.av, img:me.ava}); } }
 function shrinkPhoto(file){
   return new Promise((res, rej) => { const im = new Image(), url = URL.createObjectURL(file);
