@@ -475,7 +475,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 
       <div class="qrbox" id="qrBox" hidden>
         <div id="qr" role="img" aria-label="QR code that opens this game"></div>
-        <p><b>Scan to join.</b> Point a phone camera at this code. It opens the game with the code already filled in, so they only type their name.</p>
+        <p><b>Scan to join</b></p>
       </div>
 
       <section class="sec">
@@ -483,20 +483,20 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <div class="roster" id="roster"></div>
         <div class="avarow">
           <span class="avaprev" id="avaPrev" aria-hidden="true"></span>
-          <button class="ghost" type="button" id="avaBtn">Take a photo for my icon</button>
-          <button class="ghost" type="button" id="avaClear" hidden>Use the plain peg</button>
+          <button class="ghost" type="button" id="avaBtn">📷 My photo</button>
+          <button class="ghost" type="button" id="avaClear" hidden>Remove photo</button>
           <button class="ghost" type="button" id="frameBtn">🎁 Frames</button>
           <input type="file" id="avaIn" accept="image/*" capture="user" hidden>
         </div>
-        <p class="msg" id="avaMsg">Optional. Your photo replaces your dot on the map. Only people in this game see it.</p>
-        <label class="check"><input type="checkbox" id="cTeams"> <span><b>Teams.</b> Split the hiders into teams that compete to stay free the longest. Each team gets a color, a name and an icon.</span></label>
+        <p class="msg" id="avaMsg"></p>
+        <label class="check"><input type="checkbox" id="cTeams"> <span><b>Teams</b></span></label>
         <div id="teamBox" hidden>
           <div class="slider"><div class="top"><label class="lbl" for="sTeams">Number of teams</label><output id="oTeams"></output></div><input type="range" id="sTeams" min="2" max="4" step="1"><small id="teamHint"></small></div>
           <div class="teamlist" id="teamList"></div>
-          <label class="check"><input type="checkbox" id="cTeamVis"> <span><b>Seekers can see teams.</b> Off means every hider looks the same to seekers, so they can't tell which team they're chasing.</span></label>
+          <label class="check"><input type="checkbox" id="cTeamVis"> <span><b>Seekers can see teams</b></span></label>
         </div>
-        <label class="check"><input type="checkbox" id="cRand"> <span><b>Secret random roles.</b> Nobody picks. When the game starts, each phone goes dark and then reveals if you're a hider or a seeker.</span></label>
-        <div class="slider" id="seekWrap" hidden><div class="top"><label class="lbl" for="sSeek">Seekers</label><output id="oSeek"></output></div><input type="range" id="sSeek" min="1" max="5" step="1"><small>How many players get picked as seekers.</small></div>
+        <label class="check"><input type="checkbox" id="cRand"> <span><b>Secret random roles</b></span></label>
+        <div class="slider" id="seekWrap" hidden><div class="top"><label class="lbl" for="sSeek">Seekers</label><output id="oSeek"></output></div><input type="range" id="sSeek" min="1" max="5" step="1"></div>
         <div class="rowbtns">
           <button class="ghost" id="shuffleBtn" type="button">Shuffle teams</button>
           <span class="teamcount" id="teamCount"></span>
@@ -539,42 +539,42 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <section class="sec">
         <h2>Play area <small id="areaHint"></small></h2>
         <div class="mapslot lob" id="slotLobby"></div>
-        <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"><small>Radius around the center pin.</small></div>
+        <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"></div>
         <div class="rowbtns"><button class="ghost" id="centerBtn" type="button">Center zone on me</button><span class="teamcount" id="gpsLobby"></span></div>
       </section>
         <section class="sec"><h2>Game settings</h2>
           <div class="sliders">
-            <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"><small>Hiders win if anyone is still free at the buzzer.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait at base while hiders scatter.</small></div>
-            <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags a hider can take. "I got caught" always ends it at once.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait while hiders scatter.</small></div>
+            <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags before you're out.</small></div>
           </div>
-          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map.</b><em class="lockb powlock" hidden>🔒 Unlock</em> Hiders grab them by walking up to them. A seeker who gets there first destroys it.</span></label>
+          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map</b><em class="lockb powlock" hidden>🔒 Unlock</em></span></label>
         </section>
         <details class="adv">
           <summary>Advanced settings</summary>
           <div class="advbody">
             <section class="sec"><h3>Zone and pings</h3>
               <div class="sliders">
-                <div class="slider"><div class="top"><label class="lbl" for="sEnd">Smallest zone</label><output id="oEnd"></output></div><input type="range" id="sEnd" min="15" max="100" step="5"><small>How tight it gets at the end.</small></div>
-                <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"><small>Number of times the circle closes in.</small></div>
-                <div class="slider" id="pingWrap"><div class="top"><label class="lbl" for="sPing">Hider ping every</label><output id="oPing"></output></div><input type="range" id="sPing" min="1" max="5" step="1"><small>Every hider's spot flashes on the seekers' map.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sEnd">Smallest zone</label><output id="oEnd"></output></div><input type="range" id="sEnd" min="15" max="100" step="5"></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sShr">Shrinks</label><output id="oShr"></output></div><input type="range" id="sShr" min="1" max="6" step="1"></div>
+                <div class="slider" id="pingWrap"><div class="top"><label class="lbl" for="sPing">Hider ping every</label><output id="oPing"></output></div><input type="range" id="sPing" min="1" max="5" step="1"></div>
               </div>
-              <label class="check"><input type="checkbox" id="cNames"> <span><b>Show names on pings.</b> Off means seekers see a ping but not whose it is.</span></label>
+              <label class="check"><input type="checkbox" id="cNames"> <span><b>Show names on pings</b></span></label>
             </section>
             <section class="sec"><h3>Tagging</h3>
               <div class="sliders">
-                <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>After a tag, the hider can't be tagged again for this long.</small></div>
-                <div class="slider"><div class="top"><label class="lbl" for="sTagCd">Tag cooldown</label><output id="oTagCd"></output></div><input type="range" id="sTagCd" min="0" max="60" step="5"><small>After a seeker tags anyone, they wait this long before they can tag again.</small></div>
-                <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close a seeker must be for the Tag button to work.</small></div>
+                <div class="slider" id="graceWrap"><div class="top"><label class="lbl" for="sGrace">Escape time</label><output id="oGrace"></output></div><input type="range" id="sGrace" min="10" max="60" step="5"><small>Safe time after being tagged.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sTagCd">Tag cooldown</label><output id="oTagCd"></output></div><input type="range" id="sTagCd" min="0" max="60" step="5"><small>Wait time between tags.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sTagR">Tag range</label><output id="oTagR"></output></div><input type="range" id="sTagR" min="10" max="50" step="5"><small>How close to tag.</small></div>
               </div>
-              <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives.</b> Off means an unfrozen hider comes back with one life.</span></label>
+              <label class="check" id="refillWrap"><input type="checkbox" id="cRefill"> <span><b>Unfreezing refills lives</b></span></label>
             </section>
             <section class="sec" id="powAdv"><h3>Power-ups<em class="lockb powlock" hidden>🔒 Unlock</em></h3>
               <div class="sliders">
-                <div class="slider"><div class="top"><label class="lbl" for="sPlim">Power-up limit</label><output id="oPlim"></output></div><input type="range" id="sPlim" min="1" max="10" step="1"><small>Total in play: on the map plus held by hiders. When one is used, a new one appears.</small></div>
-                <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"><small>How long Jammer, Ghost, Rat and Decoy last.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sPlim">Power-up limit</label><output id="oPlim"></output></div><input type="range" id="sPlim" min="1" max="10" step="1"><small>How many are in play at once.</small></div>
+                <div class="slider"><div class="top"><label class="lbl" for="sPdur">Power-up length</label><output id="oPdur"></output></div><input type="range" id="sPdur" min="15" max="90" step="5"></div>
               </div>
-              <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups.</b> Off means a hider can hold only one at a time.</span></label>
+              <label class="check"><input type="checkbox" id="cStack"> <span><b>Stack power-ups</b></span></label>
               <h3>Which power-ups are in this game</h3>
               <p class="msg" id="puHint"></p>
               <div class="pugrid">
@@ -583,7 +583,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
               </div>
             </section>
             <section class="sec"><h3>Results</h3>
-              <label class="check"><input type="checkbox" id="cReplay"> <span><b>Movement time-lapse.</b> Records where everyone went, so you can replay the whole game on the map afterwards.</span></label>
+              <label class="check"><input type="checkbox" id="cReplay"> <span><b>Replay the game after</b></span></label>
             </section>
           </div>
         </details>
@@ -1094,7 +1094,7 @@ function renderLobby(force){
     off("sTagCd", sard, "Not used in Sardines: nobody gets tagged.");
     off("cTeams", sard, "Not used in Sardines: there's only one hider.");
     off("cPow", !cfg.premium, "🔒 Part of the full unlock."); if (!cfg.premium) $("#cPow").disabled = !host; }
-  $("#teamHint").textContent = cfg.mode === "sardines" ? "Sardines has one hider, so teams are off in that mode." : rnd ? "With secret roles on, teams are dealt out at random when the game starts." : "Hiders tap their team tag in the list to switch teams.";
+  $("#teamHint").textContent = cfg.mode === "sardines" ? "No teams in Sardines." : rnd ? "Teams get picked at random." : "Tap your team tag to switch.";
   $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd || cfg.mode === "sardines";
   $("#rosterHint").textContent = rnd ? "roles are revealed when the game starts" : host ? "tap a role to switch it" : "tap your role to switch it";
   $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
@@ -1392,7 +1392,7 @@ function setMyAva(img){
   if (me.ava){ avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } else { avatars.delete(me.id); avaKey.delete(me.id); }
   store.set("zh-ava", me.ava); showMyAva(); if (N.client){ pubMe(); sendAva(); renderLobby(true); }
 }
-function showMyAva(){ const pv = $("#avaPrev"); pv.style.backgroundImage = me.ava ? "url(" + me.ava + ")" : ""; $("#avaClear").hidden = !me.ava; $("#avaBtn").textContent = me.ava ? "Retake photo" : "Take a photo for my icon"; }
+function showMyAva(){ const pv = $("#avaPrev"); pv.style.backgroundImage = me.ava ? "url(" + me.ava + ")" : ""; $("#avaClear").hidden = !me.ava; $("#avaBtn").textContent = me.ava ? "📷 Retake" : "📷 My photo"; }
 function sendAva(){ if (me.ava && Date.now() - avaSent > 1500){ avaSent = Date.now(); ev({t:"ava", id:me.id, av:me.av, img:me.ava}); } }
 function shrinkPhoto(file){
   return new Promise((res, rej) => { const im = new Image(), url = URL.createObjectURL(file);
