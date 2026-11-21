@@ -158,10 +158,10 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media (max-width:520px){.modes{grid-template-columns:1fr}}
 .mode{position:relative;display:grid;gap:4px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer}
-.modes{padding-left:30px}
+.modes{padding-left:44px}
 .mode input{position:absolute;opacity:0;pointer-events:none}
-.pvc{position:absolute;left:-31px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;border:2px solid var(--hider);background:var(--surface);cursor:pointer;display:grid;place-items:center}
-.pvc::after{content:"";width:0;height:0;border-style:solid;border-width:4px 0 4px 7px;border-color:transparent transparent transparent var(--hider);margin-left:2px}
+.pvc{position:absolute;left:-44px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:2px solid var(--hider);background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.pvc::after{content:"";width:0;height:0;border-style:solid;border-width:7px 0 7px 11px;border-color:transparent transparent transparent var(--hider);margin-left:3px}
 .mode.pv .pvc{background:var(--hider)}.mode.pv .pvc::after{border-left-color:#fff}
 .modehead{display:flex;justify-content:space-between;align-items:end;gap:8px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .modehead b{color:var(--hider);white-space:nowrap;font-size:9.5px}
@@ -272,7 +272,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid .mode{padding:10px!important;gap:0;min-height:48px;align-content:center;text-align:left}.modegrid .modes{padding-left:28px}
+  .modegrid .mode{padding:10px!important;gap:0;min-height:48px;align-content:center;text-align:left}
   .modegrid .mode strong{font-size:18px!important;overflow-wrap:anywhere}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
   #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
@@ -534,7 +534,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             </div>
           </div>
           <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
-          <p class="msg" id="demoHint"></p>
+          <p class="msg" id="demoHint" hidden></p>
 </section>
       <section class="sec">
         <h2>Play area <small id="areaHint"></small></h2>
@@ -2045,7 +2045,7 @@ $("#avaIn").addEventListener("change", async e => { const f = e.target.files && 
   try { setMyAva(await shrinkPhoto(f)); } catch(err){ $("#avaMsg").textContent = "That photo didn't work. Try another one."; } });
 { const sv = store.get("zh-ava"); if (okImg(sv)){ me.ava = sv; me.av = "s" + sv.length.toString(36) + sv.slice(-6).replace(/[^A-Za-z0-9]/g, ""); avatars.set(me.id, me.ava); avaKey.set(me.id, me.av); } showMyAva(); }
 requestAnimationFrame(drawDemo);
-$("#demoHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a ▶ circle to preview any mode, even locked ones. The host taps a mode itself to pick it.";
+$("#demoHint").textContent = "";
 $("#nameIn").value = store.get("zh-name") || "";
 const hashCode = location.hash.replace("#", "").toUpperCase();
 if (/^[A-Z0-9]{6}$/.test(hashCode)){ $("#codeIn").value = hashCode; if (saved.code !== hashCode) setInvite(hashCode); }
