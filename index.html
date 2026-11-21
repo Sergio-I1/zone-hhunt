@@ -56,6 +56,9 @@ button{cursor:pointer;touch-action:manipulation}
 .msg.err{color:var(--seeker);font-weight:600}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
 .check input{margin-top:3px;accent-color:var(--accent)}
+#lobby[data-step="1"] .step2,#lobby[data-step="2"] .step1{display:none!important}
+.backrow{display:flex;align-items:center;gap:12px}.backrow b{font-family:var(--font-display);font-weight:900;font-size:26px;text-transform:uppercase}
+#nextBtn{background:var(--hider)}
 /* frames: a ring drawn behind your dot or photo */
 .fr{position:absolute;inset:-6px;border-radius:50%;z-index:-1;pointer-events:none}
 .pm.you .fr{inset:-10px} .pm.pic .fr{inset:-7px}
@@ -464,21 +467,22 @@ input[type=range]{width:100%;accent-color:var(--zone)}
   </section>
 
   <!-- LOBBY -->
-  <section class="page" id="lobby" hidden>
+  <section class="page" id="lobby" data-step="1" hidden>
     <div class="inner">
-      <div class="codebar">
+      <div class="backrow step2"><button class="ghost" id="backBtn" type="button">← Back</button><b>Map &amp; settings</b></div>
+      <div class="codebar step1">
         <div><div class="lbl">Game code</div><div class="code" id="codeOut"></div></div>
         <span class="sp"></span>
         <button class="ghost" id="shareBtn" type="button">Share invite</button>
         <button class="ghost" id="leaveBtn" type="button">Leave</button>
       </div>
 
-      <div class="qrbox" id="qrBox" hidden>
+      <div class="qrbox step1" id="qrBox" hidden>
         <div id="qr" role="img" aria-label="QR code that opens this game"></div>
         <p><b>Scan to join</b></p>
       </div>
 
-      <section class="sec">
+      <section class="sec step1">
         <h2>Players <small id="rosterHint"></small></h2>
         <div class="roster" id="roster"></div>
         <div class="avarow">
@@ -504,7 +508,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       </section>
 
       <fieldset id="settings">
-        <section class="sec"><h2>Mode</h2>
+        <section class="sec step1"><h2>Mode</h2>
           <div class="modegrid">
             <div><div class="modehead"><b>Preview</b><span>Tap a mode to play it</span></div><div class="modes" id="modes"></div></div>
             <div class="modeside">
@@ -536,13 +540,13 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
           <p class="msg" id="demoHint" hidden></p>
 </section>
-      <section class="sec">
+      <section class="sec step2">
         <h2>Play area <small id="areaHint"></small></h2>
         <div class="mapslot lob" id="slotLobby"></div>
         <div class="slider"><div class="top"><label class="lbl" for="sStart">Starting zone</label><output id="oStart"></output></div><input type="range" id="sStart" min="50" max="1000" step="25"></div>
         <div class="rowbtns"><button class="ghost" id="centerBtn" type="button">Center zone on me</button><span class="teamcount" id="gpsLobby"></span></div>
       </section>
-        <section class="sec"><h2>Game settings</h2>
+        <section class="sec step2"><h2>Game settings</h2>
           <div class="sliders">
             <div class="slider"><div class="top"><label class="lbl" for="sMin">Hunt length</label><output id="oMin"></output></div><input type="range" id="sMin" min="5" max="60" step="5"></div>
             <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait while hiders scatter.</small></div>
@@ -550,7 +554,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           </div>
           <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map</b><em class="lockb powlock" hidden>🔒 Unlock</em></span></label>
         </section>
-        <details class="adv">
+        <details class="adv step2">
           <summary>Advanced settings</summary>
           <div class="advbody">
             <section class="sec"><h3>Zone and pings</h3>
@@ -590,7 +594,8 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       </fieldset>
 
       <div class="field">
-        <button class="big" id="startBtn" type="button">Start game</button>
+        <button class="big step1" id="nextBtn" type="button">Next: map &amp; settings →</button>
+        <button class="big step2" id="startBtn" type="button">Start game</button>
         <p class="msg" id="startMsg"></p>
       </div>
     </div>
@@ -984,7 +989,11 @@ function leave(){
 
 /* ---------------- screens ---------------- */
 let map = null, follow = true, userMoved = false;
+function lobbyStep(n){                       // the lobby is two pages: players + mode, then map + settings
+  const lb = $("#lobby"); if (lb.dataset.step === String(n)) return; lb.dataset.step = n; lb.scrollTop = 0; scrollTo(0, 0);
+  if (n === 2 && map) setTimeout(() => { map.invalidateSize(); fitZone(); }, 60); }
 function show(which){
+  if (which === "lobby" && $("#lobby").hidden) $("#lobby").dataset.step = 1;
   for (const id of ["home", "lobby", "game"]) $("#" + id).hidden = id !== which;
   if (which === "home") return homeBg.start();
   if (!map) initMap();
@@ -1932,6 +1941,9 @@ function prizeMachine(){                    // the gumball machine: turn, drop, 
     show();
   })();
 }
+
+$("#nextBtn").addEventListener("click", () => lobbyStep(2));
+$("#backBtn").addEventListener("click", () => lobbyStep(1));
 
 /* ---------------- home background: a pretend game running behind the buttons ---------------- */
 const homeBg = (() => { try {
