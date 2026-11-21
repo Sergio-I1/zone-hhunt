@@ -907,9 +907,12 @@ function askNotifications(){      // Android 13+ shows the "sharing your locatio
   try { Capacitor.registerPlugin("LocalNotifications").requestPermissions().catch(() => {}); } catch(e){}
 }
 function addWalk(m, acc){ if (cfg && cfg.phase === "live" && isFinite(m) && m > 3 && m < 150 && (acc == null || acc < 35)) me.walk += m; }
+function zoneOnMe(){                         // in the lobby the zone sits on the host until they tap the map to move it
+  if (!cfg || !isHost() || cfg.phase !== "lobby" || me.lat == null || (G.zoneManual && cfg.center)) return;
+  if (!cfg.center || dist(cfg.center, me) > Math.max(12, Math.min(me.acc || 0, 60))) hostSet({center:{lat:me.lat, lng:me.lng}}); }
 function onFix(lat, lng, acc){
   gpsErr = ""; const moved = dist(me, {lat, lng}); addWalk(moved, acc); me.lat = lat; me.lng = lng; me.acc = acc;
-  if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
+  zoneOnMe();
   if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
 }
 function startGPS(){
@@ -924,7 +927,7 @@ function startGPS(){
   watchId = navigator.geolocation.watchPosition(pos => {
     gpsErr = ""; const moved = dist(me, {lat:pos.coords.latitude, lng:pos.coords.longitude}); addWalk(moved, pos.coords.accuracy);
     me.lat = pos.coords.latitude; me.lng = pos.coords.longitude; me.acc = pos.coords.accuracy;
-    if (cfg && isHost() && cfg.phase === "lobby" && !cfg.center) hostSet({center:{lat:me.lat, lng:me.lng}});
+    zoneOnMe();
     if (N.client && (moved > 2 || Date.now() - lastPub > 2000) && Date.now() - lastPub > 1200) pubMe();
   }, err => {
     gpsErr = err.code === 1 ? "Location is blocked. Allow location for this site in your browser settings, then reload." : "Waiting for a GPS signal…";
@@ -1073,6 +1076,7 @@ function buildLobbyControls(){
 }
 let rosterSig = "";
 function renderLobby(force){
+  zoneOnMe();
   if (!cfg || cfg.phase !== "lobby") return;
   const host = isHost(), now = Date.now();
   $("#codeOut").textContent = code;
@@ -1724,7 +1728,7 @@ function initMap(){
   map.on("click", e => {
     if (!cfg) return;
     if (G.armed && cfg.phase === "live"){ G.armed = false; return placeDecoy(e.latlng); }
-    if (cfg.phase === "lobby" && isHost()) return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}});
+    if (cfg.phase === "lobby" && isHost()){ G.zoneManual = true; return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}}); }
     if (test){ me.lat = e.latlng.lat; me.lng = e.latlng.lng; pubMe(); tick(); }
   });
 }
@@ -1802,7 +1806,7 @@ $("#shuffleBtn").addEventListener("click", () => {
     else { p.role = role; ev({t:"role", id:p.id, role}); if (tm != null){ p.tm = tm; ev({t:"team", id:p.id, team:tm}); } } });
   renderLobby(true);
 });
-$("#centerBtn").addEventListener("click", () => { if (me.lat != null){ userMoved = false; hostSet({center:{lat:me.lat, lng:me.lng}}); } });
+$("#centerBtn").addEventListener("click", () => { if (me.lat != null){ userMoved = false; G.zoneManual = false; hostSet({center:{lat:me.lat, lng:me.lng}}); } });
 $("#shareBtn").addEventListener("click", async () => {
   const url = location.origin + location.pathname + location.search + "#" + code, text = "Join my Peekaboom game! Code: " + code;
   try { if (navigator.share) return await navigator.share({title:"Peekaboom", text, url}); } catch(e){ return; }
