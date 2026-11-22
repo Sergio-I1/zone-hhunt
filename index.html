@@ -74,6 +74,7 @@ button{cursor:pointer;touch-action:manipulation}
 @keyframes frspin{to{transform:rotate(360deg)}}
 .fav{position:relative;display:inline-grid;place-items:center;isolation:isolate}
 .fav .fr{inset:-4px}
+.fav[data-ava]{cursor:pointer}
 .crown{font-size:12px;margin-right:2px}
 /* frame shelf */
 .shelf{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -860,7 +861,7 @@ function onEvent(m){
     case "tinfo": if (isHost() && cfg.phase === "lobby"){ const p = players.get(m.from), icon = oneEmoji(m.icon);
         if (p && p.role === "hider" && teamOf(p) === m.i && icon) setTeamInfo(m.i, {icon}); } break;
     case "needava": if (m.id === me.id) sendAva(); break;
-    case "ava": if (m.from === m.id && m.id !== me.id && okImg(m.img)){ avatars.set(m.id, m.img); avaKey.set(m.id, String(m.av || "")); renderLobby(true); } break;
+    case "ava": if (m.from === m.id && m.id !== me.id && okImg(m.img) && !hidAva.has(m.id)){ avatars.set(m.id, m.img); avaKey.set(m.id, String(m.av || "")); renderLobby(true); } break;
     case "hello": if (m.from !== me.id) pubMe(); if (cfg) isHost() ? pubCfg(true) : setTimeout(() => cfg && pub("c", {...cfg, t:"cfg"}, false), 600 + Math.random()*900); break;
     case "bye": if (m.from !== me.id) players.delete(m.from); break;
     case "role": if (m.id === me.id && cfg && cfg.phase === "lobby" && m.from === cfg.host){ me.role = m.role; pubMe(); } break;
@@ -1125,7 +1126,7 @@ function renderLobby(force){
       const stale = now - p.seen > STALE, mine = p.id === me.id;
       const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
       const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
-      row.innerHTML = '<span class="fav">' + frU(p.fr) + (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '</span><div class="pname">' + (p.cr ? '<span class="crown" title="Won last game">👑</span>' : "") + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      row.innerHTML = '<span class="fav"' + (p.id !== me.id && (avatars.get(p.id) || hidAva.has(p.id)) ? ' data-ava="' + p.id + '" role="button" tabindex="0" title="Photo options"' : "") + '>' + frU(p.fr) + (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '</span><div class="pname">' + (p.cr ? '<span class="crown" title="Won last game">👑</span>' : "") + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
       if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       if (tOn && p.role === "hider"){ const ti = teamOf(p), tb2 = document.createElement("button"); tb2.type = "button"; tb2.className = "tchip";
         tb2.style.setProperty("--tc", TEAM_COL[ti]); tb2.textContent = tinfo(ti).icon + " " + tinfo(ti).name; tb2.disabled = !(mine || host);
@@ -1153,7 +1154,7 @@ function renderLobby(force){
   $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("locked", !modeOk(l.dataset.k));
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("pv", l.dataset.k === (DEMOS[demoMode] ? demoMode : cfg.mode));
-  $("#premiumNote").textContent = cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
+  $("#premiumNote").textContent = APP_FREE ? "" : cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
     : host ? "Free: Classic and Manhunt. The full unlock adds 4 modes and power-ups for everyone in your game." : "";
   $("#unlockBtn").hidden = !host || !!cfg.premium;
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
@@ -1166,6 +1167,18 @@ function renderLobby(force){
   sm.className = "msg" + (host && why ? " err" : "");
   sm.textContent = host ? (why || "Everyone should be at the center pin when you start.") : "Waiting for the host to start the game.";
 }
+/* ---------------- hide or report someone's photo ---------------- */
+const hidAva = new Set(store.get("pb-hidava") || []);
+$("#roster").addEventListener("click", async e => {
+  const f = e.target.closest("[data-ava]"); if (!f) return; const id = f.dataset.ava, nm = nameOf(id), hid = hidAva.has(id);
+  const c = await sheet(nm + "'s photo", [hid ? "Show their photo" : "Hide their photo", "Report this photo"]); if (!c) return;
+  if (c.startsWith("Report")){ hidAva.add(id); avatars.delete(id); avaKey.delete(id);
+    window.open("https://github.com/Sergio-I1/zone-hhunt/issues/new?title=" + encodeURIComponent("Photo report") + "&body=" + encodeURIComponent("Game code: " + code + "\nPlayer name: " + nm + "\nWhat's wrong with the photo:"), "_blank");
+    toast("Photo hidden. Thanks for reporting"); }
+  else if (hid){ hidAva.delete(id); ev({t:"needava", id}); toast("Photo shown"); }
+  else { hidAva.add(id); avatars.delete(id); avaKey.delete(id); toast("Photo hidden"); }
+  store.set("pb-hidava", [...hidAva].slice(-200)); renderLobby(true); renderMap && renderMap(); });
+
 /* ---------------- full unlock ($2.99, host only) ---------------- */
 // The host buys once in the app. Their games then unlock every mode and power-ups for everyone in them.
 // Purchases go through RevenueCat, which talks to the App Store and Google Play.
@@ -1173,7 +1186,8 @@ const FREE_MODES = ["classic", "manhunt"];
 const RC_KEYS = {ios: "", android: ""};      // RevenueCat public app keys (PURCHASES-SETUP.md)
 const ENTITLEMENT = "premium";
 const modeOk = k => FREE_MODES.includes(k) || !!(cfg && cfg.premium);
-let premium = NATIVE && store.get("zh-premium") === true, RC = null, rcReady = false, rcPkg = null;
+const APP_FREE = NATIVE && !RC_KEYS[PLATFORM];   // version 1.0 of the app: everything free until purchases are set up
+let premium = APP_FREE || (NATIVE && store.get("zh-premium") === true), RC = null, rcReady = false, rcPkg = null;
 const hasEnt = r => { const ci = (r && r.customerInfo) || r || {}; return !!(ci.entitlements && ci.entitlements.active && ci.entitlements.active[ENTITLEMENT]); };
 function setPremium(v){
   premium = !!v; store.set("zh-premium", premium);
