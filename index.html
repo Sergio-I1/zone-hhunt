@@ -418,7 +418,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .tchip[disabled]{cursor:default}
 #teamBox{display:grid;gap:12px}
 .teamlist{display:grid;gap:8px}
-.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+.trow.mine{border-color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,var(--surface))}
+.tmain{display:grid;min-width:0}.tmain b{font-weight:800;font-size:15px;display:flex;align-items:center;gap:2px}.tmain small{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tjoin{font-size:12.5px;font-weight:800;color:var(--tc);white-space:nowrap}.trow:not(.mine) .tjoin{color:var(--muted)}
+.tnote{margin:0}
 .ticon{width:42px;height:42px;border-radius:50%;border:3px solid var(--tc);background:var(--surface);font-size:19px;padding:0}
 .trow .text{max-width:none;padding:9px 12px}
 .tcount{font-size:13px;color:var(--muted);white-space:nowrap}
@@ -1107,6 +1111,7 @@ function flashCard(small, big, cls, tip, wait, hold){          // full black scr
   revT = [setTimeout(() => el.classList.add("on"), wait), setTimeout(() => el.classList.remove("on"), wait + hold), setTimeout(() => el.hidden = true, wait + hold + 400)];
 }
 const reveal = () => flashCard("You are a", me.role === "hider" ? "Hider" : "Seeker", me.role, (teamsOn() && me.role === "hider" ? tinfo(me.team % cfg.nTeams).icon + " Team " + tinfo(me.team % cfg.nTeams).name + " · " : "") + (me.role === "hider" ? "Go hide!" : "Wait at base until you're released."), 2000, 3200);
+let fitModes = () => {};
 function buildLobbyControls(){
   const box = $("#modes");
   const setPv = k => { if (demoMode !== k){ demoMode = k; demoT0 = performance.now(); }     // the circle on the left only previews
@@ -1125,14 +1130,15 @@ function buildLobbyControls(){
     box.append(l);
   }
   // every mode name is the same size, on one line: as big as the longest name allows (max 23px)
-  const fit = () => { const ss = [...box.querySelectorAll(".mode strong")]; let size = innerWidth <= 560 ? 22 : 28;
+  const fit = () => { if (box.clientWidth < 120 || !box.offsetParent) return;   // not laid out yet: measure later
+    const ss = [...box.querySelectorAll(".mode strong")]; let size = innerWidth <= 560 ? 22 : 28;
     for (const st of ss) st.style.fontSize = "";
     for (const st of ss){ const t = st.parentElement, cs = getComputedStyle(t), lk = st.querySelector(".lockb");
       const room = t.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (lk && lk.offsetWidth ? lk.offsetWidth + 8 : 0);
       const need = st.scrollWidth - (lk && lk.offsetWidth ? lk.offsetWidth + 8 : 0), base = parseFloat(getComputedStyle(st).fontSize);
-      if (room > 0 && need > room) size = Math.min(size, base*room/need); }
+      if (room > 40 && need > room) size = Math.min(size, base*room/need); }
     size = Math.max(13, Math.floor(size*10)/10); for (const st of ss) st.style.fontSize = size + "px"; window.__modeSize = size; };
-  try { new ResizeObserver(fit).observe(box); } catch(e){} if (document.fonts) document.fonts.ready.then(fit); setTimeout(fit, 0);
+  fitModes = fit; try { new ResizeObserver(fit).observe(box); } catch(e){} if (document.fonts) document.fonts.ready.then(fit); setTimeout(fit, 0);
   setTimeout(() => cfg && setPv(null), 0);
   for (const [sid, , key] of SL) $("#" + sid).addEventListener("input", e => {
     if (!isHost()) return; const patch = {[key]: +e.target.value};
@@ -1178,7 +1184,7 @@ function renderLobby(force){
     off("sTagCd", sard, "Not used in Sardines: nobody gets tagged.");
     off("cTeams", sard, "Not used in Sardines: there's only one hider.");
     off("cPow", !cfg.premium, "🔒 Part of the full unlock."); if (!cfg.premium) $("#cPow").disabled = !host; }
-  $("#teamHint").textContent = cfg.mode === "sardines" ? "No teams in Sardines." : rnd ? "Teams get picked at random." : "Tap your team tag to switch.";
+  $("#teamHint").textContent = cfg.mode === "sardines" ? "No teams in Sardines." : rnd ? "Teams get picked at random." : "Only hiders are on teams. Seekers hunt everyone.";
   $("#cRand").disabled = !host; $("#sSeek").disabled = !host; $("#seekWrap").hidden = !rnd || cfg.mode === "sardines";
   $("#rosterHint").textContent = rnd ? "roles are revealed when the game starts" : host ? "tap a role to switch it" : "tap your role to switch it";
   $("#areaHint").textContent = host ? "tap the map to move the zone" : "set by the host";
@@ -1196,8 +1202,10 @@ function renderLobby(force){
       if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       if (tOn && p.role === "hider"){ const ti = teamOf(p), tb2 = document.createElement("button"); tb2.type = "button"; tb2.className = "tchip";
         tb2.style.setProperty("--tc", TEAM_COL[ti]); tb2.textContent = tinfo(ti).icon + " " + tinfo(ti).name; tb2.disabled = !(mine || host);
-        tb2.setAttribute("aria-label", "Team " + tinfo(ti).name + ". Switch team");
-        tb2.addEventListener("click", () => { const nt = (ti + 1) % cfg.nTeams; if (mine){ me.team = nt; pubMe(); } else { p.tm = nt; ev({t:"team", id:p.id, team:nt}); } renderLobby(true); });
+        tb2.setAttribute("aria-label", "Team " + tinfo(ti).name + ". Pick a team"); tb2.textContent += " ▾";
+        tb2.addEventListener("click", async () => { const names = Array.from({length:cfg.nTeams}, (_, j) => tinfo(j).icon + " " + tinfo(j).name + (j === ti ? "  ✓" : ""));
+          const v = await sheet(mine ? "Pick your team" : "Pick a team for " + p.name, names, {quick:true}); const nt = names.indexOf(v); if (nt < 0 || nt === ti) return;
+          if (mine){ me.team = nt; pubMe(); } else { p.tm = nt; ev({t:"team", id:p.id, team:nt}); } renderLobby(true); });
         row.append(tb2); }
       const b = document.createElement("button"); b.type = "button"; b.className = "rolebtn " + p.role; b.textContent = p.role === "hider" ? "Hider" : "Seeker";
       b.disabled = !(mine || host);
@@ -1214,8 +1222,11 @@ function renderLobby(force){
   const tl = $("#teamList"), tsig = host + "|" + cfg.nTeams + JSON.stringify(cfg.teamInfo || 0) + fresh.map(p => p.role + (p.tm | 0)).join("");
   if (cfg.teams && tl.dataset.sig !== tsig && !tl.contains(document.activeElement)){ tl.dataset.sig = tsig; tl.innerHTML = "";
     for (let i = 0; i < cfg.nTeams; i++){ const n = fresh.filter(p => p.role === "hider" && teamOf(p) === i).length;
-      tl.insertAdjacentHTML("beforeend", '<div class="trow"><button class="ticon" type="button" data-i="' + i + '" style="--tc:' + TEAM_COL[i] + '" aria-label="Change icon for team ' + (i + 1) + '"' + (host || (me.role === "hider" && teamOf(me) === i && !rnd) ? "" : " disabled") + ">" + esc(tinfo(i).icon) +
-        '</button><input class="text" id="tname' + i + '" data-i="' + i + '" maxlength="12" aria-label="Name of team ' + (i + 1) + '" value="' + esc(tinfo(i).name) + '"' + (host ? "" : " disabled") + '><span class="tcount">' + (rnd ? "random" : n + (n === 1 ? " hider" : " hiders")) + "</span></div>"); } }
+      const who = fresh.filter(p => p.role === "hider" && teamOf(p) === i).map(p => p.id === me.id ? "You" : p.name), mineT = !rnd && me.role === "hider" && teamOf(me) === i;
+      tl.insertAdjacentHTML("beforeend", '<div class="trow' + (mineT ? " mine" : "") + '" data-join="' + i + '" role="button" tabindex="0" style="--tc:' + TEAM_COL[i] + '" aria-label="Join team ' + esc(tinfo(i).name) + '"><button class="ticon" type="button" data-i="' + i + '" aria-label="Change icon for team ' + (i + 1) + '"' + (host || mineT ? "" : " disabled") + ">" + esc(tinfo(i).icon) +
+        '</button><div class="tmain"><b>' + esc(tinfo(i).name) + (host ? '<button class="editname tedit" type="button" data-i="' + i + '" aria-label="Rename team ' + esc(tinfo(i).name) + '">✏️</button>' : "") + "</b><small>" + (rnd ? "Teams get picked at random" : who.length ? esc(who.join(", ")) : "Nobody yet") + "</small></div>" +
+        '<span class="tjoin">' + (rnd ? "" : mineT ? "✓ Your team" : me.role === "hider" ? "Join" : "") + "</span></div>"); }
+    if (!rnd) tl.insertAdjacentHTML("beforeend", '<p class="msg tnote">' + (me.role === "hider" ? "Tap a team to join it." : "You're a seeker. Seekers hunt every team, so they aren't on one.") + "</p>"); }
   const sard = cfg.mode === "sardines";
   $("#teamCount").textContent = rnd && sard ? fresh.length + " players · 1 random hider" : rnd ? fresh.length + " players · " + ns + " random seeker" + (ns === 1 ? "" : "s") : h + " hider" + (h === 1 ? "" : "s") + " · " + s + " seeker" + (s === 1 ? "" : "s");
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("locked", !modeOk(l.dataset.k));
@@ -1223,6 +1234,7 @@ function renderLobby(force){
   $("#premiumNote").textContent = APP_FREE ? "" : cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
     : "";                                       // the 🔒 on locked modes already says what's free
   $("#unlockBtn").hidden = !host || !!cfg.premium;
+  requestAnimationFrame(() => fitModes());
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
   let why = "";
   if (!cfg.center) why = "Waiting for your GPS so the zone can be placed.";
@@ -2219,12 +2231,20 @@ const setTeamInfo = (i, patch) => { const ti = [0, 1, 2, 3].map(j => ({...tinfo(
 const oneEmoji = v => { v = String(v || "").trim(); if (!v) return "";      // keep just the first emoji someone typed or picked
   let g = v; try { g = [...new Intl.Segmenter(undefined, {granularity:"grapheme"}).segment(v)][0].segment; } catch(e){ g = [...v][0]; }
   return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(g) ? g : ""; };
-$("#teamList").addEventListener("click", async e => { const b = e.target.closest(".ticon"); if (!b || b.disabled) return; const i = +b.dataset.i;
+$("#teamList").addEventListener("click", async e => {
+  const ed = e.target.closest(".tedit");
+  if (ed){ e.stopPropagation(); if (!isHost()) return; const i = +ed.dataset.i;
+    const v = await sheet("Rename team " + tinfo(i).name, [], {value: tinfo(i).name, placeholder: "Team name", max: 12});
+    const n = String(v || "").trim().slice(0, 12); if (n && n !== tinfo(i).name) setTeamInfo(i, {name: n}); return; }
+  const row = e.target.closest(".trow");
+  if (row && !e.target.closest(".ticon")){ if (cfg.randomRoles) return; const i = +row.dataset.join;
+    if (me.role !== "hider") return toast("Seekers aren't on a team. Tap Seeker next to your name to become a Hider first.");
+    if (teamOf(me) !== i){ me.team = i; pubMe(); renderLobby(true); } return; }
+  const b = e.target.closest(".ticon"); if (!b || b.disabled) return; const i = +b.dataset.i;
   const v = await sheet("Pick an emoji for team " + tinfo(i).name, TEAM_ICONS, {value: "", placeholder:"Or type any emoji, then OK", quick:true, max:16});
   const icon = oneEmoji(v); if (!icon){ if (v) toast("That's not an emoji"); return; }
   if (isHost()) setTeamInfo(i, {icon}); else ev({t:"tinfo", i, icon}); });
-$("#teamList").addEventListener("change", e => { const inp = e.target.closest("input"); if (!inp || !isHost()) return; const i = +inp.dataset.i;
-  inp.blur(); setTeamInfo(i, {name: inp.value.trim().slice(0, 12) || TEAM_DEF[i].name}); });
+$("#teamList").addEventListener("keydown", e => { const row = e.target.closest(".trow"); if (row && e.target === row && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); row.click(); } });
 $("#unlockBtn").addEventListener("click", () => openPaywall(""));
 $("#pwClose").addEventListener("click", closePaywall);
 $("#paywall").addEventListener("click", e => { if (e.target.id === "paywall") closePaywall(); });

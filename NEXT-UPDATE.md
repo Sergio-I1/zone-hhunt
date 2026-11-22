@@ -28,3 +28,8 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 - Apple email: new apps and updates must be built with the newer Xcode / iOS SDK (iOS 27 SDK from April 2027).
   The iPhone build workflow uses the latest stable Xcode on GitHub, so it should pick this up on its own once GitHub's Mac machines have it.
   Check the build log for the Xcode version before submitting after that date.
+
+## Game mode ideas (from Sergio, Nov 22)
+- Points mode: teams can mix hiders and seekers. Seekers score for tags, hiders score for time hidden; team with the most points wins.
+- "Last one found" mode: the last hider found wins (maybe also points for how long each person lasted).
+- Teams now: tap a team to join it, ✏️ renames (host), tapping a player's team tag opens a team list. Only hiders are on teams.
