@@ -52,19 +52,17 @@ def _():
         "primarySubcategoryTwo": {"data": {"type": "appCategories", "id": "GAMES_FAMILY"}}}}})
     print("  ", "ok" if r else "failed")
 
+YES = {"userGeneratedContent", "sharedLocation"}   # players can share a photo icon, and their location with their game
 @step("agerating")
 def _():
     d = call("GET", f"/v1/appInfos/{INFO}/ageRatingDeclaration")["data"]
-    print("   current:", json.dumps(d["attributes"]))
-    want = {}
-    for k, v in d["attributes"].items():
-        if k in ("kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "developerAgeRatingInfoUrl"): continue
-        if isinstance(v, bool) or k in BOOLS: want[k] = k in YES
-        elif v is None or isinstance(v, str): want[k] = "NONE"
-    r = call("PATCH", f"/v1/ageRatingDeclarations/{d['id']}", {"data": {"type": "ageRatingDeclarations", "id": d["id"], "attributes": want}})
-    print("   set:", json.dumps(want)); print("  ", "ok" if r else "failed")
-BOOLS = {"gambling", "unrestrictedWebAccess", "lootBox", "messagingAndChat", "userGeneratedContent", "parentalControls", "ageAssurance", "healthOrWellnessTopics", "advertising", "seventeenPlus", "gunsOrOtherWeapons", "contests"}
-YES = {"userGeneratedContent"}          # players can share a photo as their icon
+    skip = {"kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "developerAgeRatingInfoUrl", "gracRatingClassificationNumber"}
+    for k in d["attributes"]:
+        if k in skip: continue
+        for v in ([k in YES] if k in YES else [False, "NONE"]):     # yes/no questions take true/false, the rest take NONE
+            r = S.patch(f"{API}/v1/ageRatingDeclarations/{d['id']}", json={"data": {"type": "ageRatingDeclarations", "id": d["id"], "attributes": {k: v}}}, headers={"Authorization": "Bearer " + token()})
+            if r.ok: print(f"   {k} = {v}"); break
+        else: print(f"  ! {k}: {r.status_code} {r.text[:300]}")
 
 @step("text")
 def _():
