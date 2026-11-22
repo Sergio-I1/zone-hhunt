@@ -63,6 +63,7 @@ button{cursor:pointer;touch-action:manipulation}
 .introlet{position:relative;display:flex;font-family:Fredoka,"Big Shoulders Display",system-ui,sans-serif;font-weight:700;font-size:min(42vw,220px);line-height:1;margin-top:-12vh}
 .introlet span{display:inline-block;-webkit-text-stroke:.025em #fff;paint-order:stroke fill;filter:drop-shadow(0 .04em .08em rgba(0,0,0,.45))}
 .ip,.ib{-webkit-background-clip:text;background-clip:text;color:transparent}
+.introlet.solid .ip{background-image:linear-gradient(#FF2E8B,#FF2E8B)}.introlet.solid .ib{background-image:linear-gradient(#1A8CFF,#1A8CFF)}
 .ip{background-image:linear-gradient(90deg,#FF2E8B 35%,#A35CFF);margin-right:-.12em;position:relative;z-index:2}.ib{background-image:linear-gradient(90deg,#A35CFF,#1A8CFF 65%)}
 .introtxt{position:absolute;top:calc(50% + min(18vw,100px));left:0;right:0;text-align:center;color:#fff;opacity:0;display:grid;gap:2px}
 .introtxt small{font:600 15px Figtree,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#D9C6FF}
@@ -2017,13 +2018,13 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
     } catch(e){} };
   const rumble = () => {                     // low shaking rumble while the letters fly in
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume();
-      const t = ac.currentTime, n = ac.createBuffer(1, ac.sampleRate*.6, ac.sampleRate), d = n.getChannelData(0); let v = 0;
+      const t = ac.currentTime, n = ac.createBuffer(1, ac.sampleRate*1.5, ac.sampleRate), d = n.getChannelData(0); let v = 0;
       for (let i = 0; i < d.length; i++){ v = v*.97 + (Math.random()*2 - 1)*.03; d[i] = v*8; }
       const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "lowpass"; f.frequency.value = 160;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.9, t + .5); g.gain.linearRampToValueAtTime(0, t + .6);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.9, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 1.45);
       src.buffer = n; src.connect(f).connect(g).connect(ac.destination); src.start(t);
-      const o = ac.createOscillator(), og = ac.createGain(); o.frequency.setValueAtTime(42, t); o.frequency.linearRampToValueAtTime(70, t + .5);
-      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.35, t + .5); og.gain.linearRampToValueAtTime(0, t + .55); o.connect(og).connect(ac.destination); o.start(t); o.stop(t + .6);
+      const o = ac.createOscillator(), og = ac.createGain(); o.frequency.setValueAtTime(38, t); o.frequency.linearRampToValueAtTime(75, t + 1.25);
+      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.35, t + 1.2); og.gain.linearRampToValueAtTime(0, t + 1.35); o.connect(og).connect(ac.destination); o.start(t); o.stop(t + 1.5);
     } catch(e){} };
   const peekaboo = () => {                   // kids' voices: a few high, bouncy "Peekaboo!"s
     try { const sy = window.speechSynthesis; if (!sy) return;
@@ -2032,12 +2033,17 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
     } catch(e){} };
   el.addEventListener("pointerdown", () => { boom(); end(); });
   rumble();
-  setTimeout(peekaboo, 1500);
   const P = $("#iP"), B = $("#iB"), T = $("#iT"), L = el.querySelector(".introlet"), cv = $("#introFx"), x = cv.getContext("2d");
-  const fly = {duration:520, easing:"cubic-bezier(.5,0,.9,.5)", fill:"both"};
-  P.animate([{transform:"translateX(-120vw) rotate(-25deg)"}, {transform:"translateX(0) rotate(0)"}], fly);
-  B.animate([{transform:"translateX(120vw) rotate(25deg)"}, {transform:"translateX(0) rotate(0)"}], fly);
+  // 1) P and B wait apart and shake, 2) fly off the sides, 3) fly back in and crash
+  L.classList.add("solid");
+  const pr = P.getBoundingClientRect(), br = B.getBoundingClientRect(), Wd = innerWidth;
+  const dxP = Wd*.22 - (pr.left + pr.width/2), dxB = Wd*.78 - (br.left + br.width/2);
+  const SHAKE = 1300, OUT = 380, IN = 480, CRASH = SHAKE + OUT + IN;
+  const shake = (dx, sign) => Array.from({length:27}, (_, i) => { const k = i/26, a = 2 + k*5; return {transform:"translate(" + (dx + (i % 2 ? a : -a)*(i % 3 ? 1 : -.6)).toFixed(1) + "px," + ((i % 4 < 2 ? 1 : -1)*a*.6).toFixed(1) + "px) rotate(" + (sign*(i % 2 ? 1 : -1)*k*4).toFixed(1) + "deg) scale(" + (.9 + k*.08).toFixed(3) + ")"}; });
+  P.animate(shake(dxP, -1).concat([{transform:"translateX(-130vw) rotate(-30deg) scale(.98)", offset:(SHAKE + OUT)/CRASH}, {transform:"translateX(-130vw) rotate(-30deg) scale(1)", offset:(SHAKE + OUT + 1)/CRASH}, {transform:"translateX(0) rotate(0) scale(1)"}]).map((f, i, a) => i < 27 ? {...f, offset:(i/26)*SHAKE/CRASH} : f), {duration:CRASH, easing:"ease-in", fill:"both"});
+  B.animate(shake(dxB, 1).concat([{transform:"translateX(130vw) rotate(30deg) scale(.98)", offset:(SHAKE + OUT)/CRASH}, {transform:"translateX(130vw) rotate(30deg) scale(1)", offset:(SHAKE + OUT + 1)/CRASH}, {transform:"translateX(0) rotate(0) scale(1)"}]).map((f, i, a) => i < 27 ? {...f, offset:(i/26)*SHAKE/CRASH} : f), {duration:CRASH, easing:"ease-in", fill:"both"});
   setTimeout(() => {
+    L.classList.remove("solid");
     boom();
     L.animate([0, -14, 12, -9, 7, -4, 0].map((v, i) => ({transform:"translate(" + v + "px," + (i % 2 ? 6 : -6)*(i < 6 ? 1 : 0) + "px) scale(" + (i === 1 ? 1.12 : 1) + ")"})), {duration:420});
     el.animate([{transform:"translate(0,0)"}, {transform:"translate(6px,-5px)"}, {transform:"translate(-6px,4px)"}, {transform:"translate(3px,2px)"}, {transform:"translate(0,0)"}], {duration:300});
@@ -2051,8 +2057,9 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
       for (const p of parts){ p.x += p.vx; p.y += p.vy; p.vx *= .96; p.vy = p.vy*.96 + .12*k; x.beginPath(); x.arc(p.x, p.y, p.r, 0, Math.PI*2); x.fillStyle = p.c; x.fill(); }
       requestAnimationFrame(draw); })(t0);
     T.animate([{opacity:0, transform:"translateY(14px) scale(.9)"}, {opacity:1, transform:"none"}], {duration:450, delay:250, fill:"forwards", easing:"ease-out"});
-  }, 520);
-  setTimeout(end, 2700);
+  }, CRASH);
+  setTimeout(peekaboo, CRASH + 900);
+  setTimeout(end, CRASH + 2300);
 })();
 
 /* ---------------- home background: a pretend game running behind the buttons ---------------- */
