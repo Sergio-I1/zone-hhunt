@@ -51,6 +51,8 @@ button{cursor:pointer;touch-action:manipulation}
 .optrow .chip input{margin:0}.optrow .chip:has(input:checked){border-color:var(--zone);background:color-mix(in srgb,var(--zone) 10%,var(--surface))}
 .optrow .chipbtn{padding:7px 11px;border-radius:999px;font-size:14px}
 .optrow .teamcount{font-size:12px;color:var(--muted)}
+.demonote{margin:0;font:700 12.5px/1.3 var(--font-body);color:var(--ink);min-height:2.6em}
+.powdemo{justify-self:start;font-size:13px;padding:7px 12px}
 .powrow{margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 #avaMsg:empty{display:none}
 .editname{border:0;background:none;padding:0 4px;font-size:14px;cursor:pointer}
@@ -319,12 +321,16 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}
-  .modegrid .mode{padding:10px 42px 10px 9px!important;gap:0;min-height:48px;align-content:center;text-align:left}
-  .modegrid .micon{right:5px}
-  .modegrid .mode strong{font-size:28px;white-space:nowrap;line-height:1;letter-spacing:.01em}.modegrid .mode>span{display:none}
+  .modegrid{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:8px}
+  .modegrid .modes{padding-left:38px;gap:5px}
+  .modegrid .pvc{left:-37px;width:30px;height:30px}.modegrid .pvc::after{border-width:6px 0 6px 9px}
+  .modegrid .mode{padding:8px 34px 8px 8px!important;gap:0;min-height:42px;align-content:center;text-align:left;border-radius:12px}
+  .modegrid .micon{right:4px}.modegrid .micon svg{width:27px;height:27px}
+  .modeside .tabs{flex-wrap:nowrap}.modeside .tabs button{white-space:nowrap;flex:1}
+  #lobby .inner{gap:14px}
+  .modegrid .mode strong{font-size:22px;white-space:nowrap;line-height:1;letter-spacing:.01em}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
-  #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
+  #demoCap{font-size:12.5px}.modeside .mocks{zoom:.72;gap:8px}}
 .demo canvas{width:100%;height:auto;display:block;border-radius:var(--radius);border:1px solid var(--line)}
 .demo p{margin:0;font-size:13px;color:var(--muted)}
 .pulist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -561,10 +567,10 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <div class="modecol"><div class="modehead"><b>Preview</b><span style="padding-left:12px">Tap to play</span></div><div class="modes" id="modes"></div></div>
             <div class="modeside">
               <div class="lbl" id="pvLbl">Preview</div>
-            <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas></div>
+            <div class="demo"><canvas id="demo" width="600" height="320" role="img" aria-label="Animated example of the selected game mode"></canvas><p class="demonote" id="demoNote" hidden></p></div>
             <p class="msg" id="demoCap"></p>
             <div class="tabs" id="mockTabs" role="group" aria-label="Phone screen examples"><span class="lbl">Phone screens</span>
-            <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button><button type="button" data-t="pow" aria-pressed="false">Using a power-up</button></div>
+            <button type="button" data-t="tag" aria-pressed="true">Tagging</button><button type="button" data-t="hit" aria-pressed="false">Got tagged</button></div>
             <div class="mocks">
             <figure class="mock" aria-label="Example of the hider's screen">
               <div class="mscreen">
@@ -584,6 +590,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             </div>
           </div>
           <label class="check powrow"><input type="checkbox" id="cPow"> <span><b>⚡ Power-ups on the map</b><em class="lockb powlock" hidden>🔒 Unlock</em></span></label>
+          <button type="button" class="ghost powdemo" id="powDemoBtn" hidden aria-pressed="false">▶ See how power-ups work</button>
           <div class="unlockrow" style="justify-content:flex-end"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
           <p class="msg" id="demoHint" hidden></p>
 </section>
@@ -1118,7 +1125,7 @@ function buildLobbyControls(){
     box.append(l);
   }
   // every mode name is the same size, on one line: as big as the longest name allows (max 23px)
-  const fit = () => { const ss = [...box.querySelectorAll(".mode strong")]; let size = 28;
+  const fit = () => { const ss = [...box.querySelectorAll(".mode strong")]; let size = innerWidth <= 560 ? 22 : 28;
     for (const st of ss) st.style.fontSize = "";
     for (const st of ss){ const t = st.parentElement, cs = getComputedStyle(t), lk = st.querySelector(".lockb");
       const room = t.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (lk && lk.offsetWidth ? lk.offsetWidth + 8 : 0);
@@ -1407,12 +1414,14 @@ function drawScene(cv, d, u){
     x.fill(); x.stroke();
     if (kind === "x"){ x.beginPath(); x.moveTo(px - 3, py - 3); x.lineTo(px + 3, py + 3); x.moveTo(px + 3, py - 3); x.lineTo(px - 3, py + 3); x.stroke(); }
     x.globalAlpha = 1;
-    x.font = "700 9px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText((o.label || name) + (kind === "f" ? " ❄" : ""), px, py - 10);
+    x.font = "700 " + (x.canvas.clientWidth && x.canvas.clientWidth < 260 ? 13 : 9) + "px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillStyle = ink; x.fillText((o.label || name) + (kind === "f" ? " ❄" : ""), px, py - 10);
     if (o.sub){ x.fillStyle = cS; x.font = "11px sans-serif"; x.fillText(o.sub, px, py + 18); }
   }
   if (d.jam){ x.fillStyle = "rgba(24,33,28,.94)"; x.fillRect(0, 0, 300, 160); x.strokeStyle = "rgba(255,255,255,.07)"; x.lineWidth = 6;
     for (let i = -160; i < 300; i += 18){ x.beginPath(); x.moveTo(i, 160); x.lineTo(i + 160, 0); x.stroke(); }
     x.fillStyle = "#fff"; x.font = "800 15px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.fillText("SIGNAL JAMMED", 150, 88); }
+  const small = x.canvas.clientWidth > 0 && x.canvas.clientWidth < 260, dn = $("#demoNote");   // on a phone the step text goes under the picture, where it's readable
+  dn.hidden = !small; if (small){ if (dn.textContent !== d.note) dn.textContent = d.note; return; }
   x.font = "700 11px Figtree, system-ui, sans-serif"; x.textAlign = "left";
   const nw = x.measureText(d.note).width; x.fillStyle = css("--surface"); x.globalAlpha = .9; x.beginPath(); x.roundRect(5, 5, nw + 12, 17, 6); x.fill(); x.globalAlpha = 1;
   x.fillStyle = ink; x.fillText(d.note, 11, 17.5);
@@ -1430,7 +1439,9 @@ function drawDemo(){
 let mockTab = "tag";
 function setMock(tab){
   if (tab) mockTab = tab; const t = mockTab, L = cfg ? cfg.lives : 2, one = L < 2;
+  if (t === "pow" && !(cfg && cfg.powerups)) return setMock("tag");     // the power-up example only shows when power-ups are on
   for (const b of document.querySelectorAll("#mockTabs button")) b.setAttribute("aria-pressed", String(b.dataset.t === t));
+  { const pb = $("#powDemoBtn"); pb.hidden = !(cfg && cfg.powerups); pb.setAttribute("aria-pressed", String(t === "pow")); pb.textContent = t === "pow" ? "◼ Showing how power-ups work" : "▶ See how power-ups work"; }
   const hearts = (n, lost) => "♥".repeat(n) + (lost ? "<s>" + "♥".repeat(lost) + "</s>" : "");
   const hA = $("#mhAlert"), sA = $("#msAlert"), sB = $("#msBtn"), hT = $("#mhToast"), jam = $("#msJam"), bank = $("#mockBank");
   hT.hidden = true; jam.hidden = true; sB.classList.remove("dim"); hA.hidden = false; sA.hidden = false; sA.className = "malert spot"; hA.className = "malert danger";
@@ -2203,6 +2214,7 @@ $("#puList").addEventListener("click", pickPu); $("#puList").addEventListener("p
 $("#puList").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); pickPu(e); } });   // rows are not real buttons so players who aren't the host can use them too
 $("#puHint").textContent = (matchMedia("(hover: hover)").matches ? "Hover over" : "Tap") + " a power-up to see it in action. Untick any you don't want in this game.";
 $("#mockTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMock(b.dataset.t); });
+$("#powDemoBtn").addEventListener("click", () => { setMock(mockTab === "pow" ? "tag" : "pow"); if (mockTab === "pow") $(".modeside .mocks").scrollIntoView({behavior:"smooth", block:"center"}); });
 const setTeamInfo = (i, patch) => { const ti = [0, 1, 2, 3].map(j => ({...tinfo(j)})); Object.assign(ti[i], patch); hostSet({teamInfo: ti}); };
 const oneEmoji = v => { v = String(v || "").trim(); if (!v) return "";      // keep just the first emoji someone typed or picked
   let g = v; try { g = [...new Intl.Segmenter(undefined, {granularity:"grapheme"}).segment(v)][0].segment; } catch(e){ g = [...v][0]; }
