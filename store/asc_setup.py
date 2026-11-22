@@ -53,16 +53,15 @@ def _():
     print("  ", "ok" if r else "failed")
 
 YES = {"userGeneratedContent", "sharedLocation"}   # players can share a photo icon, and their location with their game
+BOOL_Q = {"advertising", "ageAssurance", "datingAndRelationships", "gambling", "healthOrWellnessTopics", "lootBox", "messagingAndChat", "parentalControls",
+          "sharedLocation", "socialMedia", "socialMediaAgeRestricted", "unrestrictedWebAccess", "userGeneratedContent"}
 @step("agerating")
 def _():
     d = call("GET", f"/v1/appInfos/{INFO}/ageRatingDeclaration")["data"]
     skip = {"kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "developerAgeRatingInfoUrl", "gracRatingClassificationNumber"}
-    for k in d["attributes"]:
-        if k in skip: continue
-        for v in ([k in YES] if k in YES else [False, "NONE"]):     # yes/no questions take true/false, the rest take NONE
-            r = S.patch(f"{API}/v1/ageRatingDeclarations/{d['id']}", json={"data": {"type": "ageRatingDeclarations", "id": d["id"], "attributes": {k: v}}}, headers={"Authorization": "Bearer " + token()})
-            if r.ok: print(f"   {k} = {v}"); break
-        else: print(f"  ! {k}: {r.status_code} {r.text[:300]}")
+    want = {k: (k in YES) if k in BOOL_Q else "NONE" for k in d["attributes"] if k not in skip}   # all answered at once, as Apple requires
+    r = call("PATCH", f"/v1/ageRatingDeclarations/{d['id']}", {"data": {"type": "ageRatingDeclarations", "id": d["id"], "attributes": want}})
+    print("   yes:", sorted(k for k, v in want.items() if v is True)); print("  ", "ok" if r else "failed")
 
 @step("text")
 def _():
