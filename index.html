@@ -563,7 +563,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             </div>
             </div>
           </div>
-          <div class="unlockrow"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
+          <div class="unlockrow" style="justify-content:flex-end"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
           <p class="msg" id="demoHint" hidden></p>
 </section>
       <section class="sec step2">
@@ -1178,7 +1178,7 @@ function renderLobby(force){
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("locked", !modeOk(l.dataset.k));
   for (const l of document.querySelectorAll("#modes .mode")) l.classList.toggle("pv", l.dataset.k === (DEMOS[demoMode] ? demoMode : cfg.mode));
   $("#premiumNote").textContent = APP_FREE ? "" : cfg.premium ? "✨ Full unlock is on for this game: every mode and power-ups, from " + nameOf(cfg.host) + "."
-    : host ? "Free: Classic and Manhunt. The full unlock adds 4 modes and power-ups for everyone in your game." : "";
+    : "";                                       // the 🔒 on locked modes already says what's free
   $("#unlockBtn").hidden = !host || !!cfg.premium;
   const sb = $("#startBtn"), sm = $("#startMsg"); sb.hidden = !host;
   let why = "";
@@ -2037,11 +2037,11 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
   // 1) P and B wait apart and shake, 2) fly off the sides, 3) fly back in and crash
   L.classList.add("solid");
   const pr = P.getBoundingClientRect(), br = B.getBoundingClientRect(), Wd = innerWidth;
-  const dxP = Wd*.22 - (pr.left + pr.width/2), dxB = Wd*.78 - (br.left + br.width/2);
-  const SHAKE = 1300, OUT = 380, IN = 480, CRASH = SHAKE + OUT + IN;
-  const shake = (dx, sign) => Array.from({length:27}, (_, i) => { const k = i/26, a = 2 + k*5; return {transform:"translate(" + (dx + (i % 2 ? a : -a)*(i % 3 ? 1 : -.6)).toFixed(1) + "px," + ((i % 4 < 2 ? 1 : -1)*a*.6).toFixed(1) + "px) rotate(" + (sign*(i % 2 ? 1 : -1)*k*4).toFixed(1) + "deg) scale(" + (.9 + k*.08).toFixed(3) + ")"}; });
-  P.animate(shake(dxP, -1).concat([{transform:"translateX(-130vw) rotate(-30deg) scale(.98)", offset:(SHAKE + OUT)/CRASH}, {transform:"translateX(-130vw) rotate(-30deg) scale(1)", offset:(SHAKE + OUT + 1)/CRASH}, {transform:"translateX(0) rotate(0) scale(1)"}]).map((f, i, a) => i < 27 ? {...f, offset:(i/26)*SHAKE/CRASH} : f), {duration:CRASH, easing:"ease-in", fill:"both"});
-  B.animate(shake(dxB, 1).concat([{transform:"translateX(130vw) rotate(30deg) scale(.98)", offset:(SHAKE + OUT)/CRASH}, {transform:"translateX(130vw) rotate(30deg) scale(1)", offset:(SHAKE + OUT + 1)/CRASH}, {transform:"translateX(0) rotate(0) scale(1)"}]).map((f, i, a) => i < 27 ? {...f, offset:(i/26)*SHAKE/CRASH} : f), {duration:CRASH, easing:"ease-in", fill:"both"});
+  const gap = 14 + 8, dxP = (gap + pr.width*.45) - (pr.left + pr.width/2), dxB = (Wd - gap - br.width*.45) - (br.left + br.width/2);   // near each edge, never past it
+  const SHAKE = 1300, IN = 330, CRASH = SHAKE + IN;
+  const shake = (dx, sign) => Array.from({length:27}, (_, i) => { const k = i/26, a = 2 + k*5; return {offset:(i/26)*SHAKE/CRASH, transform:"translate(" + (dx + (i % 2 ? a : -a)*(i % 3 ? 1 : -.6)).toFixed(1) + "px," + ((i % 4 < 2 ? 1 : -1)*a*.6).toFixed(1) + "px) rotate(" + (sign*(i % 2 ? 1 : -1)*k*4).toFixed(1) + "deg) scale(.9)"}; });
+  P.animate(shake(dxP, -1).concat([{transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, easing:"cubic-bezier(.6,0,1,.6)", fill:"both"});
+  B.animate(shake(dxB, 1).concat([{transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, easing:"cubic-bezier(.6,0,1,.6)", fill:"both"});
   setTimeout(() => {
     L.classList.remove("solid");
     boom();
