@@ -1,0 +1,31 @@
+name: App Store listing
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: "Steps to run, comma separated (blank = all): names,category,agerating,text,build,screenshots,price,availability"
+        required: false
+        default: ""
+      build:
+        description: "Build number to attach (blank = newest ready build)"
+        required: false
+        default: ""
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_KEY_P8 }}
+      RAW_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      RAW_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+      STEPS: ${{ inputs.steps }}
+      BUILD: ${{ inputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pyjwt cryptography requests
+      - name: Fill in the listing
+        run: |
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="$(echo "$RAW_KEY_ID" | tr -d '[:space:]')"
+          export APP_STORE_CONNECT_ISSUER_ID="$(echo "$RAW_ISSUER" | tr -d '[:space:]')"
+          python store/asc_setup.py

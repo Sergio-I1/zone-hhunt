@@ -1,0 +1,22 @@
+Peekaboom turns hide-and-seek into a game you play outside with your friends, on a live map.
+
+One person creates a game and everyone else joins by scanning a QR code or typing a 6-letter code. No accounts, no sign-up. Pick who hides and who seeks, or let the game deal out secret roles. Then the hiders scatter while the seekers wait.
+
+THE ZONE CLOSES IN
+The play area is a circle on the map that shrinks during the game. Stay inside it, because hiders caught outside get exposed.
+
+6 WAYS TO PLAY
+• Classic: seekers hunt, and every hider's spot pings on the map every few minutes.
+• Manhunt: everyone is visible the whole time. Pure chase.
+• Infection: every hider who gets caught becomes a seeker.
+• Last Zone Standing: the zone never stops closing.
+• Freeze Tag: caught hiders freeze until a teammate runs over and unfreezes them.
+• Sardines: one hider, and everyone who finds them hides with them.
+
+POWER-UPS
+Walk to power-ups on the map: an extra life, a Jammer that blacks out the seekers' maps, Ghost mode, Superstar, Detour, a Decoy and a Disguise.
+
+AFTER EVERY GAME
+See awards like Google Maps Intern and Professional Statue, replay the whole game on the map, and win a random frame for your icon. Collect all 9.
+
+Your location is shared only with the players in your game, only while you play. No ads, no subscriptions.
