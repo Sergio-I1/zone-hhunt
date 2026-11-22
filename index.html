@@ -2039,11 +2039,13 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
   L.classList.add("solid");
   const pr = P.getBoundingClientRect(), br = B.getBoundingClientRect(), Wd = innerWidth;
   const dxP = Wd*.2 - (pr.left + pr.width/2), dxB = Wd*.8 - (br.left + br.width/2);   // start 20% in from each side
-  const SHAKE = 1100, WIND = 350, IN = 260, CRASH = SHAKE + WIND + IN;   // shake, lean back to build momentum, then slam together
+  const SHAKE = 1100, WIND = 150, IN = 260, CRASH = SHAKE + WIND + IN;   // shake, lean back to build momentum, then slam together
   const shake = (dx, sign) => Array.from({length:23}, (_, i) => { const k = i/22, a = 2 + k*5; return {offset:(i/22)*SHAKE/CRASH, easing:"linear", transform:"translate(" + (dx + (i % 2 ? a : -a)*(i % 3 ? 1 : -.6)).toFixed(1) + "px," + ((i % 4 < 2 ? 1 : -1)*a*.6).toFixed(1) + "px) rotate(" + (sign*(i % 2 ? 1 : -1)*k*4).toFixed(1) + "deg) scale(.9)"}; });
-  const wind = (dx, sign) => ({offset:(SHAKE + WIND)/CRASH, easing:"cubic-bezier(.7,0,1,.5)", transform:"translate(" + (dx + sign*Wd*.07).toFixed(1) + "px,0) rotate(" + sign*14 + "deg) scale(.9)"});
-  P.animate(shake(dxP, -1).concat([wind(dxP, -1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
-  B.animate(shake(dxB, 1).concat([wind(dxB, 1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
+  const edgeP = (8 + pr.width*.5) - (pr.left + pr.width/2), edgeB = (Wd - 8 - br.width*.5) - (br.left + br.width/2);   // pulled back right to the edge
+  const wind = (dx, sign) => ({offset:(SHAKE + WIND)/CRASH, easing:"cubic-bezier(.7,0,1,.5)", transform:"translate(" + dx.toFixed(1) + "px,0) rotate(" + sign*14 + "deg) scale(.9)"});
+  const snap = {easing:"cubic-bezier(.2,.8,.4,1)"};        // the pull-back is a quick snap
+  P.animate(shake(dxP, -1).map((f, i) => i === 22 ? {...f, ...snap} : f).concat([wind(edgeP, -1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
+  B.animate(shake(dxB, 1).map((f, i) => i === 22 ? {...f, ...snap} : f).concat([wind(edgeB, 1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
   setTimeout(() => {
     L.classList.remove("solid");
     boom();
