@@ -44,6 +44,16 @@ button{cursor:pointer;touch-action:manipulation}
 .homein .brand h1{background:linear-gradient(90deg,#FF2E8B,#A35CFF 55%,#1A8CFF);-webkit-background-clip:text;background-clip:text;color:transparent}.homein .brand h1 span{color:inherit}
 .brand p{margin:0;color:var(--muted);max-width:46ch}
 .field{display:grid;gap:6px}
+#lobby .inner>.field{position:sticky;bottom:0;z-index:5;margin-top:4px;padding:10px 0 max(10px,env(safe-area-inset-bottom));background:var(--bg);box-shadow:0 -16px 16px -4px var(--bg)}
+#lobby .inner>.field .msg:empty{display:none}
+.optrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.optrow .chip{padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:14px;align-items:center;gap:6px}
+.optrow .chip input{margin:0}.optrow .chip:has(input:checked){border-color:var(--zone);background:color-mix(in srgb,var(--zone) 10%,var(--surface))}
+.optrow .chipbtn{padding:7px 11px;border-radius:999px;font-size:14px}
+.optrow .teamcount{font-size:12px;color:var(--muted)}
+.powrow{margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+#avaMsg:empty{display:none}
+.editname{border:0;background:none;padding:0 4px;font-size:14px;cursor:pointer}
 .lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .text{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;width:100%;font-size:16px}
 .big{border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);padding:15px 20px;font-family:var(--font-display);font-weight:900;font-size:26px;letter-spacing:.06em;text-transform:uppercase;width:100%}
@@ -71,7 +81,7 @@ button{cursor:pointer;touch-action:manipulation}
 .introtxt b{font-family:"Big Shoulders Display",system-ui,sans-serif;font-weight:900;font-size:min(16vw,72px);text-transform:uppercase;line-height:1;background:linear-gradient(90deg,#FF5AA8,#A35CFF,#4DA6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
 #lobby[data-step="1"] .step2,#lobby[data-step="2"] .step1{display:none!important}
 .backrow{display:flex;align-items:center;gap:12px}.backrow b{font-family:var(--font-display);font-weight:900;font-size:26px;text-transform:uppercase}
-#nextBtn{background:var(--hider)}
+#nextBtn,#startBtn{background:linear-gradient(90deg,#F0217E,#8445F0 55%,#1A7FF0)}
 /* frames: a ring drawn behind your dot or photo */
 .fr{position:absolute;inset:-6px;border-radius:50%;z-index:-1;pointer-events:none}
 .pm.you .fr{inset:-10px} .pm.pic .fr{inset:-7px}
@@ -522,18 +532,18 @@ input[type=range]{width:100%;accent-color:var(--zone)}
           <input type="file" id="avaIn" accept="image/*" capture="user" hidden>
         </div>
         <p class="msg" id="avaMsg"></p>
-        <label class="check"><input type="checkbox" id="cTeams"> <span><b>Teams</b></span></label>
+        <div class="optrow">
+          <label class="check chip"><input type="checkbox" id="cTeams"> <span><b>Teams</b></span></label>
+          <label class="check chip"><input type="checkbox" id="cRand"> <span><b>Secret roles</b></span></label>
+          <button class="ghost chipbtn" id="shuffleBtn" type="button">🔀 Shuffle</button>
+          <span class="teamcount" id="teamCount"></span>
+        </div>
         <div id="teamBox" hidden>
           <div class="slider"><div class="top"><label class="lbl" for="sTeams">Number of teams</label><output id="oTeams"></output></div><input type="range" id="sTeams" min="2" max="4" step="1"><small id="teamHint"></small></div>
           <div class="teamlist" id="teamList"></div>
           <label class="check"><input type="checkbox" id="cTeamVis"> <span><b>Seekers can see teams</b></span></label>
         </div>
-        <label class="check"><input type="checkbox" id="cRand"> <span><b>Secret random roles</b></span></label>
         <div class="slider" id="seekWrap" hidden><div class="top"><label class="lbl" for="sSeek">Seekers</label><output id="oSeek"></output></div><input type="range" id="sSeek" min="1" max="5" step="1"></div>
-        <div class="rowbtns">
-          <button class="ghost" id="shuffleBtn" type="button">Shuffle teams</button>
-          <span class="teamcount" id="teamCount"></span>
-        </div>
       </section>
 
       <fieldset id="settings">
@@ -564,6 +574,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             </div>
             </div>
           </div>
+          <label class="check powrow"><input type="checkbox" id="cPow"> <span><b>⚡ Power-ups on the map</b><em class="lockb powlock" hidden>🔒 Unlock</em></span></label>
           <div class="unlockrow" style="justify-content:flex-end"><p class="msg" id="premiumNote"></p><button class="ghost" type="button" id="unlockBtn" hidden>Unlock all modes · $2.99</button></div>
           <p class="msg" id="demoHint" hidden></p>
 </section>
@@ -579,7 +590,6 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait while hiders scatter.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags before you're out.</small></div>
           </div>
-          <label class="check"><input type="checkbox" id="cPow"> <span><b>Power-ups on the map</b><em class="lockb powlock" hidden>🔒 Unlock</em></span></label>
         </section>
         <details class="adv step2">
           <summary>Advanced settings</summary>
@@ -1150,7 +1160,7 @@ function renderLobby(force){
       const stale = now - p.seen > STALE, mine = p.id === me.id;
       const row = document.createElement("div"); row.className = "prow" + (stale ? " stale" : "");
       const tags = [mine ? "you" : "", p.id === cfg.host ? "host" : "", stale ? "offline" : ""].filter(Boolean).join(" · ");
-      row.innerHTML = '<span class="fav"' + (p.id !== me.id && (avatars.get(p.id) || hidAva.has(p.id)) ? ' data-ava="' + p.id + '" role="button" tabindex="0" title="Photo options"' : "") + '>' + frU(p.fr) + (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '</span><div class="pname">' + (p.cr ? '<span class="crown" title="Won last game">👑</span>' : "") + esc(p.name) + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
+      row.innerHTML = '<span class="fav"' + (p.id !== me.id && (avatars.get(p.id) || hidAva.has(p.id)) ? ' data-ava="' + p.id + '" role="button" tabindex="0" title="Photo options"' : "") + '>' + frU(p.fr) + (avatars.get(p.id) ? '<img class="pava" alt="" src="' + avatars.get(p.id) + '">' : '<i class="mark ' + (rnd ? "unk" : p.role) + '"></i>') + '</span><div class="pname">' + (p.cr ? '<span class="crown" title="Won last game">👑</span>' : "") + esc(p.name) + (p.id === me.id && cfg.phase === "lobby" ? '<button class="editname" type="button" data-editname aria-label="Change my name">✏️</button>' : "") + (tags ? "<em>" + tags + "</em>" : "") + "</div>";
       if (rnd){ row.insertAdjacentHTML("beforeend", '<span class="rolebtn unk">Secret</span>'); box.append(row); continue; }
       if (tOn && p.role === "hider"){ const ti = teamOf(p), tb2 = document.createElement("button"); tb2.type = "button"; tb2.className = "tchip";
         tb2.style.setProperty("--tc", TEAM_COL[ti]); tb2.textContent = tinfo(ti).icon + " " + tinfo(ti).name; tb2.disabled = !(mine || host);
@@ -1191,6 +1201,13 @@ function renderLobby(force){
   sm.className = "msg" + (host && why ? " err" : "");
   sm.textContent = host ? (why || "Everyone should be at the center pin when you start.") : "Waiting for the host to start the game.";
 }
+/* ---------------- fix your name from the lobby ---------------- */
+$("#roster").addEventListener("click", async e => {
+  if (!e.target.closest("[data-editname]")) return;
+  const v = await sheet("Your name", [], {value: me.name, placeholder: "Your name", max: 16});
+  const n = String(v || "").trim().slice(0, 16); if (!n || n === me.name) return;
+  me.name = n; store.set("zh-name", n); $("#nameIn").value = n; save(); pubMe(); renderLobby(true); toast("Name changed to " + n); });
+
 /* ---------------- hide or report someone's photo ---------------- */
 const hidAva = new Set(store.get("pb-hidava") || []);
 $("#roster").addEventListener("click", async e => {
