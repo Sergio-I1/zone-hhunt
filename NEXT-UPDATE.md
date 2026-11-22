@@ -10,6 +10,8 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 ## Lobby
 - Move the "Power-ups on the map" on/off switch to page 1, right below the 6 modes (where the old mode descriptions were), so mode and power-ups are picked together.
 - Remove that switch from page 2 (map & settings). The detailed power-up settings can stay in Advanced.
+- Put Teams, Seekers count, Randomize teams and Secret random roles on one horizontal row next to Players (small toggles/chips) to save vertical space.
+- Goal: no scrolling. Page 1 should fit on one phone screen with the Next button already visible at the bottom when it opens; page 2 the same with Start game at the bottom. Keep the button pinned to the bottom even as players join.
 
 ## Intro
 - Letters start 20% in from each side, shake, lean back to build momentum, then slam together. Done in 1.0.1.
