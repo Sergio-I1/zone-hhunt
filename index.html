@@ -1814,7 +1814,8 @@ const markers = new Map(), pingMarkers = new Map(), itemMarkers = new Map(), cat
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function initMap(){
   map = L.map("map", {zoomControl:false}).setView([29.8884, -97.9384], 16);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+  map.attributionControl.setPrefix(false);       // no "Leaflet" credit needed; OpenStreetMap's credit must stay
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap contributors"}).addTo(map);
   const zc = css("--zone");
   Ls = L.polygon([], {stroke:false, fillColor:"#2a1648", fillOpacity:.38, interactive:false}).addTo(map);
   Lz = L.circle([0, 0], {radius:1, color:zc, weight:3, fill:false, interactive:false});
@@ -1823,7 +1824,8 @@ function initMap(){
   map.on("click", e => {
     if (!cfg) return;
     if (G.armed && cfg.phase === "live"){ G.armed = false; return placeDecoy(e.latlng); }
-    if (cfg.phase === "lobby" && isHost()){ G.zoneManual = true; return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}}); }
+    if (cfg.phase === "lobby" && isHost()){ if (map.getZoom() < 13) return map.setView(e.latlng, 16);   // zoomed way out: zoom in first, so the zone never lands in the ocean
+      G.zoneManual = true; return hostSet({center:{lat:e.latlng.lat, lng:e.latlng.lng}}); }
     if (test){ me.lat = e.latlng.lat; me.lng = e.latlng.lng; pubMe(); tick(); }
   });
 }
@@ -1831,7 +1833,7 @@ function curZones(){
   if (cfg.phase === "lobby") return cfg.center ? {cur:{...cfg.center, r:cfg.startR}, next:{...cfg.center, r:cfg.endR}} : {};
   return G.zi ? {cur:G.zi.cur, next:G.zi.next} : {};
 }
-function fitZone(){ const z = cfg && (cfg.phase === "lobby" ? curZones().cur : cfg.zones && cfg.zones[0]); if (map && z) map.fitBounds(L.latLng(z.lat, z.lng).toBounds(z.r*2.25)); }
+function fitZone(){ const z = cfg && (cfg.phase === "lobby" ? curZones().cur : cfg.zones && cfg.zones[0]); if (map && z && map.getSize().x > 0) map.fitBounds(L.latLng(z.lat, z.lng).toBounds(z.r*2.25)); }
 function setCircle(layer, z){ if (!z){ layer.remove(); return; } layer.setLatLng([z.lat, z.lng]); layer.setRadius(z.r); if (!map.hasLayer(layer)) layer.addTo(map); }
 function renderMap(){
   if (!map || !cfg) return;
