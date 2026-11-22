@@ -6,3 +6,4 @@ build/
 *.keystore
 signing-key-info.txt
 android/
+__pycache__/
