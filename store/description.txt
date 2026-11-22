@@ -17,6 +17,6 @@ POWER-UPS
 Walk to power-ups on the map: an extra life, a Jammer that blacks out the seekers' maps, Ghost mode, Superstar, Detour, a Decoy and a Disguise.
 
 AFTER EVERY GAME
-See awards like Google Maps Intern and Professional Statue, replay the whole game on the map, and win a random frame for your icon. Collect all 9.
+Get a funny recap ("You found Ana in 40 seconds… but Bo took you 3 minutes!"), watch the whole chase again on the map, and win a random frame for your icon. Collect all 9.
 
 Your location is shared only with the players in your game, only while you play. No ads, no subscriptions.
