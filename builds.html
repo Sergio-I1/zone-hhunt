@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Peekaboom Builds</title>
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0E0819;--card:#1A1030;--card2:#22163D;--line:#33245A;--ink:#F3EEFF;--muted:#A99BC9;--pink:#FF2E8B;--blue:#1A8CFF;--purple:#A35CFF;--ok:#3DDC97;--bad:#FF5A6E;--warn:#FFC24A;
+  --display:"Big Shoulders Display",system-ui,sans-serif;--body:Figtree,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 0 0,rgba(255,46,139,.16),transparent 40%),radial-gradient(circle at 100% 100%,rgba(26,140,255,.16),transparent 40%),var(--bg);background-attachment:fixed;color:var(--ink);font:15px/1.45 var(--body);min-height:100vh}
+.wrap{max-width:760px;margin:0 auto;padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+header{display:flex;align-items:center;gap:12px}
+header img{width:48px;height:48px;border-radius:12px}
+h1{margin:0;font:900 34px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;background:linear-gradient(90deg,#FF5AA8,#A35CFF,#4DA6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.now h2,.hist h2{margin:0 0 4px;font:800 22px/1.1 var(--display);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{font:700 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:99px;background:var(--card2);color:var(--muted);border:1px solid var(--line)}
+.chip.run{color:#fff;background:linear-gradient(90deg,var(--pink),var(--purple),var(--blue));border:0}
+.chip.ok{color:#0E2A1E;background:var(--ok);border:0}.chip.bad{color:#fff;background:var(--bad);border:0}.chip.wait{color:#2A1E00;background:var(--warn);border:0}
+.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.bar{height:16px;border-radius:99px;background:var(--card2);border:1px solid var(--line);overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:linear-gradient(90deg,var(--pink),var(--purple),var(--blue));transition:width .8s ease}
+.bar.live i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shine 1.4s linear infinite}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.pct{display:flex;justify-content:space-between;font:700 13px var(--mono);color:var(--muted);margin:8px 0 14px}
+.pct b{color:var(--ink)}
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ol.steps li{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--card2);min-width:0}
+ol.steps li span{min-width:0;overflow-wrap:anywhere}
+ol.steps li small{font:500 12px var(--mono);color:var(--muted);white-space:nowrap}
+.dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;border:2px solid var(--line);color:var(--muted)}
+li.done .dot{background:var(--ok);border-color:var(--ok);color:#0E2A1E}
+li.doing .dot{border-color:var(--purple);border-top-color:transparent;animation:spin .9s linear infinite}
+li.fail .dot{background:var(--bad);border-color:var(--bad);color:#fff}
+li.todo{opacity:.55}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hist{display:grid;gap:10px}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;padding:12px 14px}
+summary::-webkit-details-marker{display:none}
+summary .num{font:900 24px/1 var(--display);min-width:48px}
+summary .when{color:var(--muted);font-size:13px;min-width:0}
+summary .arr{transition:transform .2s;color:var(--muted)}
+details[open] .arr{transform:rotate(180deg)}
+.body{padding:0 14px 14px;display:grid;gap:8px}
+.body ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.body li{overflow-wrap:anywhere}
+.body .meta{font:500 12px var(--mono);color:var(--muted)}
+.tag{font:700 10.5px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--ok);margin-left:6px}
+.foot{color:var(--muted);font-size:12px;text-align:center}
+.foot a{color:var(--muted)}
+.err{color:var(--warn);font-size:13px}
+@media (max-width:480px){summary{grid-template-columns:auto 1fr auto}summary .chip{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><img src="icon-192.png" alt=""><div><h1>Peekaboom Builds</h1><p>Live progress of the iPhone app builds. Updates by itself.</p></div></header>
+
+  <section class="card now" id="now">
+    <h2>Loading…</h2>
+  </section>
+
+  <section class="hist">
+    <h2 style="margin:6px 0 0;font:800 22px/1.1 var(--display);text-transform:uppercase;letter-spacing:.04em">Earlier builds</h2>
+    <div id="hist" style="display:grid;gap:10px"></div>
+  </section>
+
+  <p class="foot" id="foot">Checks GitHub every 20 seconds · <a href="https://github.com/Sergio-I1/zone-hhunt/actions" target="_blank" rel="noopener">open on GitHub</a></p>
+</div>
+<script>
+const REPO = "Sergio-I1/zone-hhunt", API = "https://api.github.com/repos/" + REPO;
+const APPLE_MIN = 12;                    // Apple usually takes about this long to process an upload
+const cache = new Map();                 // ETag cache: unchanged answers don't use up GitHub's hourly limit
+async function gh(path){
+  const c = cache.get(path), h = {Accept:"application/vnd.github+json"};
+  if (c) h["If-None-Match"] = c.etag;
+  const r = await fetch(API + path, {headers:h});
+  if (r.status === 304 && c) return c.data;
+  if (!r.ok) throw new Error(r.status === 403 ? "GitHub asked us to slow down. Trying again soon." : "GitHub said " + r.status);
+  const data = await r.json(); cache.set(path, {etag:r.headers.get("ETag"), data}); return data;
+}
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ago = t => { const s = Math.max(0, (Date.now() - new Date(t))/1000); if (s < 60) return "just now"; if (s < 3600) return Math.round(s/60) + " min ago"; if (s < 86400) return Math.round(s/3600) + " h ago"; return new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+const dur = (a, b) => { const s = Math.max(0, Math.round((new Date(b || Date.now()) - new Date(a))/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+const clock = t => new Date(t).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+// friendlier names for the build steps
+const NICE = [[/Set up job/i,"Start up the Mac"],[/checkout/i,"Get the latest code"],[/node/i,"Set up Node"],[/newest Xcode/i,"Pick the newest Xcode"],[/Check the secrets/i,"Check the signing keys"],[/Create the Xcode project/i,"Make the Xcode project"],[/version and build number/i,"Set version and build number"],[/signing tools/i,"Install the signing tools"],[/certificate and profile/i,"Make the App Store certificate"],[/^Build$/i,"Build the app"],[/Send to TestFlight/i,"Upload to TestFlight"],[/upload-artifact|Upload .*artifact|Run actions\/upload/i,"Save a copy of the build"],[/^Post /i,null],[/Complete job/i,"Finish up"]];
+const nice = n => { for (const [re, v] of NICE) if (re.test(n)) return v; return n; };
+
+let runs = [], openNums = new Set();
+async function changes(run, prev){         // what changed in this build: the commits since the build before it
+  try {
+    if (!prev) { const c = await gh("/commits/" + run.head_sha); return [c.commit.message]; }
+    if (prev.head_sha === run.head_sha) return null;
+    const d = await gh("/compare/" + prev.head_sha + "..." + run.head_sha);
+    return d.commits.map(c => c.commit.message).reverse();
+  } catch(e){ return ["(couldn't load: " + e.message + ")"]; }
+}
+const msgList = msgs => msgs === null ? '<p class="meta">Same code as the build before it (rebuilt).</p>'
+  : "<ul>" + msgs.map(m => { const [first, ...rest] = m.split("\n").filter(l => l.trim() && !/^(Co-Authored-By|Claude-Session):/i.test(l)); return "<li>" + esc(first || "") + (rest.length ? '<div class="meta">' + esc(rest.join(" ")) + "</div>" : "") + "</li>"; }).join("") + "</ul>";
+
+async function drawNow(){
+  const run = runs[0]; if (!run) { $("#now").innerHTML = "<h2>No builds yet</h2>"; return; }
+  const jobs = await gh("/actions/runs/" + run.id + "/jobs");
+  const steps = ((jobs.jobs[0] || {}).steps || []).map(s => ({...s, nice:nice(s.name)})).filter(s => s.nice);
+  const live = run.status !== "completed", ok = run.conclusion === "success";
+  // after GitHub uploads it, Apple processes the build (we estimate this part)
+  const upDone = !live && ok, upAt = run.updated_at, appleLeft = upDone ? APPLE_MIN*60 - (Date.now() - new Date(upAt))/1000 : null;
+  const appleState = !upDone ? "todo" : appleLeft > 0 ? "doing" : "done";
+  const all = steps.length + 1, done = steps.filter(s => s.status === "completed").length + (appleState === "done" ? 1 : 0) + (appleState === "doing" ? .5 : 0)
+    + steps.filter(s => s.status === "in_progress").length*.5;
+  const pct = !steps.length ? (live ? 3 : 0) : Math.min(100, Math.round(done/all*100));
+  const status = live ? (run.status === "queued" ? ["wait","Waiting for a Mac"] : ["run","Building"]) : ok ? (appleState === "done" ? ["ok","Ready in TestFlight"] : ["run","Apple is processing"]) : ["bad","Failed"];
+  const prev = runs[1], msgs = await changes(run, prev);
+  $("#now").innerHTML =
+    '<h2>Build ' + run.run_number + ' <span class="chip ' + status[0] + '">' + status[1] + "</span></h2>" +
+    '<p class="sub">Started ' + clock(run.run_started_at || run.created_at) + " · " + (live ? "running for " + dur(run.run_started_at || run.created_at) : "GitHub part took " + dur(run.run_started_at || run.created_at, run.updated_at)) +
+      (appleState === "doing" ? " · TestFlight in about " + Math.max(1, Math.ceil(appleLeft/60)) + " min" : "") + "</p>" +
+    '<div class="bar' + (live || appleState === "doing" ? " live" : "") + '"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="pct"><span>' + (live ? "Step " + Math.min(steps.length, steps.filter(s => s.status === "completed").length + 1) + " of " + all : appleState === "doing" ? "Last step: Apple" : ok ? "All done" : "Stopped") + "</span><b>" + pct + "%</b></div>" +
+    '<ol class="steps">' + steps.map(s => {
+      const st = s.status === "completed" ? (s.conclusion === "success" || s.conclusion === "skipped" ? "done" : "fail") : s.status === "in_progress" ? "doing" : "todo";
+      return '<li class="' + st + '"><i class="dot">' + (st === "done" ? "✓" : st === "fail" ? "!" : "") + "</i><span>" + esc(s.nice) + "</span><small>" + (s.started_at && s.completed_at ? dur(s.started_at, s.completed_at) : s.started_at ? dur(s.started_at) : "") + "</small></li>";
+    }).join("") +
+    '<li class="' + appleState + '"><i class="dot">' + (appleState === "done" ? "✓" : "") + "</i><span>Apple processes it, then it shows in TestFlight</span><small>" + (appleState === "doing" ? "~" + Math.max(1, Math.ceil(appleLeft/60)) + " min" : appleState === "done" ? "done" : "~" + APPLE_MIN + " min") + "</small></li></ol>" +
+    '<details style="margin-top:14px"' + (openNums.has("now") ? " open" : "") + ' data-k="now"><summary><span class="num" style="font-size:18px">What\'s new</span><span class="when">in build ' + run.run_number + '</span><span></span><span class="arr">▾</span></summary><div class="body">' + msgList(msgs) + "</div></details>";
+}
+async function drawHist(){
+  const box = $("#hist"), list = runs.slice(1, 16);
+  const html = [];
+  for (let i = 0; i < list.length; i++){
+    const r = list[i], prev = runs[i + 2], ok = r.conclusion === "success";
+    const k = String(r.run_number), open = openNums.has(k);
+    const msgs = open ? await changes(r, prev) : undefined;
+    html.push('<details data-k="' + k + '"' + (open ? " open" : "") + '><summary><span class="num">' + r.run_number + '</span><span class="when">' + ago(r.created_at) + " · " + clock(r.created_at) + " · took " + dur(r.run_started_at || r.created_at, r.updated_at) + '</span><span class="chip ' + (ok ? "ok" : r.status !== "completed" ? "run" : "bad") + '">' + (ok ? "Done" : r.status !== "completed" ? "Running" : "Failed") + '</span><span class="arr">▾</span></summary><div class="body">' + (open ? msgList(msgs) : '<p class="meta">Loading…</p>') + "</div></details>");
+  }
+  box.innerHTML = html.join("");
+}
+document.addEventListener("toggle", e => { const d = e.target; if (!d.dataset || !d.dataset.k) return; d.open ? openNums.add(d.dataset.k) : openNums.delete(d.dataset.k); if (d.open && d.querySelector(".meta") && d.querySelector(".meta").textContent === "Loading…") refresh(); }, true);
+let busy = false;
+async function refresh(){
+  if (busy) return; busy = true;
+  try {
+    const d = await gh("/actions/workflows/ios.yml/runs?per_page=17");
+    runs = d.workflow_runs;
+    await drawNow(); await drawHist();
+    $("#foot").innerHTML = "Updated " + clock(Date.now()) + " · checks every 20 seconds · <a href=\"https://github.com/" + REPO + "/actions\" target=\"_blank\" rel=\"noopener\">open on GitHub</a>";
+  } catch(e){ $("#foot").innerHTML = '<span class="err">' + esc(e.message) + "</span>"; }
+  busy = false;
+}
+refresh(); setInterval(refresh, 20000);
+</script>
+</body>
+</html>
