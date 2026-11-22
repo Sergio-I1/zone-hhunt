@@ -57,12 +57,13 @@ button{cursor:pointer;touch-action:manipulation}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
 .check input{margin-top:3px;accent-color:var(--accent)}
 /* opening animation: P and B crash together */
-.intro{position:fixed;inset:0;z-index:4000;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#3A1B6E,#170B2C 70%);overflow:hidden;transition:opacity .45s}
+.intro{position:fixed;inset:0;z-index:4000;display:grid;place-items:center;background:radial-gradient(circle at 0% 0%,rgba(255,46,139,.42),transparent 42%),radial-gradient(circle at 100% 100%,rgba(26,140,255,.42),transparent 42%),radial-gradient(circle at 50% 42%,#2E1460,#0B0614 72%);overflow:hidden;transition:opacity .45s}
 .intro.done{opacity:0;pointer-events:none}
 #introFx{position:absolute;inset:0;width:100%;height:100%}
 .introlet{position:relative;display:flex;font-family:Fredoka,"Big Shoulders Display",system-ui,sans-serif;font-weight:700;font-size:min(42vw,220px);line-height:1;margin-top:-12vh}
 .introlet span{display:inline-block;-webkit-text-stroke:.025em #fff;paint-order:stroke fill;filter:drop-shadow(0 .04em .08em rgba(0,0,0,.45))}
-.ip{color:#FF2E8B;margin-right:-.12em;position:relative;z-index:2}.ib{color:#1A8CFF}
+.ip,.ib{-webkit-background-clip:text;background-clip:text;color:transparent}
+.ip{background-image:linear-gradient(90deg,#FF2E8B 35%,#A35CFF);margin-right:-.12em;position:relative;z-index:2}.ib{background-image:linear-gradient(90deg,#A35CFF,#1A8CFF 65%)}
 .introtxt{position:absolute;top:calc(50% + min(18vw,100px));left:0;right:0;text-align:center;color:#fff;opacity:0;display:grid;gap:2px}
 .introtxt small{font:600 15px Figtree,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#D9C6FF}
 .introtxt b{font-family:"Big Shoulders Display",system-ui,sans-serif;font-weight:900;font-size:min(16vw,72px);text-transform:uppercase;line-height:1;background:linear-gradient(90deg,#FF5AA8,#A35CFF,#4DA6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -144,7 +145,8 @@ button{cursor:pointer;touch-action:manipulation}
 .homein .brand p{color:var(--ink);font-weight:600;text-shadow:0 1px 8px var(--bg),0 0 3px var(--bg)}
 .homecard{display:grid;gap:12px;padding:16px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 12px 36px rgba(0,0,0,.18)}
 .homecard .text{font-size:17px;padding:14px}
-.joinbig{width:auto;background:var(--hider);color:#fff;font-size:22px;padding:12px 22px}
+#createBtn{background:linear-gradient(90deg,#F0217E,#8445F0)}
+.joinbig{width:auto;background:linear-gradient(90deg,#8445F0,#1A7FF0);color:#fff;font-size:22px;padding:12px 22px}
 .more{justify-self:center;width:100%;font-size:13px;color:var(--muted)}
 .more>summary{cursor:pointer;text-align:center;font-weight:600;padding:6px;list-style:none;text-shadow:0 1px 6px var(--bg)}
 .more>summary::-webkit-details-marker{display:none}
@@ -2013,7 +2015,24 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
       const w = ac.createOscillator(), wg = ac.createGain(); w.type = "triangle"; w.frequency.setValueAtTime(500, t - .35); w.frequency.exponentialRampToValueAtTime(1400, t);   // whoosh-ping as they fly in
       wg.gain.setValueAtTime(0, t - .35); wg.gain.linearRampToValueAtTime(.08, t - .05); wg.gain.linearRampToValueAtTime(0, t); w.connect(wg).connect(ac.destination); w.start(Math.max(0, t - .35)); w.stop(t + .01);
     } catch(e){} };
+  const rumble = () => {                     // low shaking rumble while the letters fly in
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume();
+      const t = ac.currentTime, n = ac.createBuffer(1, ac.sampleRate*.6, ac.sampleRate), d = n.getChannelData(0); let v = 0;
+      for (let i = 0; i < d.length; i++){ v = v*.97 + (Math.random()*2 - 1)*.03; d[i] = v*8; }
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "lowpass"; f.frequency.value = 160;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.9, t + .5); g.gain.linearRampToValueAtTime(0, t + .6);
+      src.buffer = n; src.connect(f).connect(g).connect(ac.destination); src.start(t);
+      const o = ac.createOscillator(), og = ac.createGain(); o.frequency.setValueAtTime(42, t); o.frequency.linearRampToValueAtTime(70, t + .5);
+      og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.35, t + .5); og.gain.linearRampToValueAtTime(0, t + .55); o.connect(og).connect(ac.destination); o.start(t); o.stop(t + .6);
+    } catch(e){} };
+  const peekaboo = () => {                   // kids' voices: a few high, bouncy "Peekaboo!"s
+    try { const sy = window.speechSynthesis; if (!sy) return;
+      const vs = sy.getVoices().filter(v => /^en/i.test(v.lang)), pick = i => vs.length ? vs[i % vs.length] : null;
+      [[2, 1.15], [1.75, 1.2]].forEach(([pitch, rate], i) => { const u = new SpeechSynthesisUtterance("Peekaboo!"); u.pitch = pitch; u.rate = rate; u.volume = 1; const v = pick(i*3); if (v) u.voice = v; sy.speak(u); });
+    } catch(e){} };
   el.addEventListener("pointerdown", () => { boom(); end(); });
+  rumble();
+  setTimeout(peekaboo, 1500);
   const P = $("#iP"), B = $("#iB"), T = $("#iT"), L = el.querySelector(".introlet"), cv = $("#introFx"), x = cv.getContext("2d");
   const fly = {duration:520, easing:"cubic-bezier(.5,0,.9,.5)", fill:"both"};
   P.animate([{transform:"translateX(-120vw) rotate(-25deg)"}, {transform:"translateX(0) rotate(0)"}], fly);
@@ -2027,7 +2046,7 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
     let t0 = performance.now();
     (function draw(now){ const f = Math.max(0, (now - t0)/1000); if (f > 1.6 || gone) return; x.clearRect(0, 0, W, Hh);
       x.globalAlpha = Math.max(0, 1 - f*1.4); x.beginPath(); x.arc(cx, cy, (40 + f*900)*k, 0, Math.PI*2); x.strokeStyle = "#B38CFF"; x.lineWidth = 6*k; x.stroke();
-      if (f < .12){ x.globalAlpha = 1 - f/.12; x.fillStyle = "#fff"; x.fillRect(0, 0, W, Hh); }
+      if (f < .14){ x.globalAlpha = (1 - f/.14)*.8; x.fillStyle = "#B38CFF"; x.fillRect(0, 0, W, Hh); }
       x.globalAlpha = Math.max(0, 1 - f/1.4);
       for (const p of parts){ p.x += p.vx; p.y += p.vy; p.vx *= .96; p.vy = p.vy*.96 + .12*k; x.beginPath(); x.arc(p.x, p.y, p.r, 0, Math.PI*2); x.fillStyle = p.c; x.fill(); }
       requestAnimationFrame(draw); })(t0);
