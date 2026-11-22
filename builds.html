@@ -75,7 +75,7 @@ details[open] .arr{transform:rotate(180deg)}
 </div>
 <script>
 const REPO = "Sergio-I1/zone-hhunt", API = "https://api.github.com/repos/" + REPO;
-const APPLE_MIN = 12;                    // Apple usually takes about this long to process an upload
+const APPLE_MIN = 6;                     // Apple usually takes about this long to process an upload
 const cache = new Map();                 // ETag cache: unchanged answers don't use up GitHub's hourly limit
 async function gh(path){
   const c = cache.get(path), h = {Accept:"application/vnd.github+json"};
