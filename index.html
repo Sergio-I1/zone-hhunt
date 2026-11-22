@@ -202,6 +202,12 @@ fieldset{border:0;margin:0;padding:0;min-width:0;display:grid;gap:24px}
 .mode.pv .pvc{background:var(--hider)}.mode.pv .pvc::after{border-left-color:#fff}
 .modehead{display:grid;grid-template-columns:56px minmax(0,1fr);align-items:end;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .modehead b{color:var(--hider);white-space:nowrap;font-family:var(--font-display);font-weight:900;font-size:17px;letter-spacing:.02em;line-height:1}
+.micon{position:absolute;right:8px;font-style:normal;top:50%;transform:translateY(-50%);font-size:26px;line-height:1;opacity:.9;pointer-events:none}
+.mode{padding-right:42px!important}
+.zrings{width:28px;height:28px;display:block}.zrings circle{fill:var(--zone);stroke:var(--zone);stroke-width:1.5}
+.zrings circle:nth-child(1){fill-opacity:.15}.zrings circle:nth-child(2){fill-opacity:.3}.zrings circle:nth-child(3){fill-opacity:.6}
+.zrings circle:nth-child(1){animation:zshrink 2.4s ease-in-out infinite;transform-origin:20px 20px}
+@keyframes zshrink{0%,100%{transform:scale(1)}50%{transform:scale(.72)}}
 .mode.pv:not(:has(input:checked)){border-style:dashed;border-color:var(--hider)}
 
 
@@ -312,7 +318,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mocks .mock,.modeside>*{min-width:0}
 
 @media (max-width:560px){
-  .modegrid .mode{padding:10px!important;gap:0;min-height:48px;align-content:center;text-align:left}
+  .modegrid .mode{padding:10px 40px 10px 10px!important;gap:0;min-height:48px;align-content:center;text-align:left}
   .modegrid .mode strong{font-size:18px!important;overflow-wrap:break-word;hyphens:none}.modegrid .mode strong{font-size:14px;line-height:1.05}.modegrid .mode>span{display:none}
   .modeside .tabs .lbl,.modeside figcaption{display:none}.modeside .tabs button{padding:4px 8px;font-size:11px}
   #demoCap{font-size:12px}.modeside .mocks{zoom:.66;gap:10px}}
@@ -746,6 +752,9 @@ const QS = new URLSearchParams(location.search);
 const BROKER_OVERRIDE = QS.get("broker");
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const SIGHT0 = 30, PICK_R = 12, ALERT = 60, PING_SHOW = 45, OUT_GRACE = 30, STALE = 25000, DROP = 60000;   // DROP: a player gone this long is out until they come back
+const MICON = {                               // a picture for each mode so they're easy to remember
+  classic: "🙈", manhunt: "⚔️", infection: "🧟", freeze: "🧊", sardines: "🐟",
+  zone: '<svg viewBox="0 0 40 40" class="zrings"><circle cx="20" cy="20" r="18"/><circle cx="20" cy="20" r="12"/><circle cx="20" cy="20" r="6"/></svg>'};
 const MODES = {
   classic:  {name:"Classic",            blurb:"Seekers hunt, caught hiders are out. Hiders' spots ping on the map every few minutes."},
   manhunt:  {name:"Manhunt",            blurb:"Nobody is hidden on the map. Everyone sees everyone. Pure chase."},
@@ -1091,7 +1100,7 @@ function buildLobbyControls(){
   for (const [k, m] of Object.entries(MODES)){
     const l = document.createElement("label"); l.className = "mode";       // the tile itself picks the mode (host)
     l.dataset.k = k;
-    l.innerHTML = '<i class="pvc" role="button" tabindex="0" aria-label="Preview ' + esc(m.name) + '"></i><input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
+    l.innerHTML = '<i class="pvc" role="button" tabindex="0" aria-label="Preview ' + esc(m.name) + '"></i><input type="radio" name="mode" id="mode-' + k + '" value="' + k + '"><i class="micon" aria-hidden="true">' + (MICON[k] || "") + '</i><strong>' + esc(m.name) + (FREE_MODES.includes(k) ? "" : '<em class="lockb">🔒</em>') + "</strong><span>" + esc(m.blurb) + "</span>";
     l.querySelector("input").addEventListener("change", e => {
       if (!isHost()) return;
       if (!modeOk(k)){ e.target.checked = false; const r = $("#mode-" + cfg.mode); if (r) r.checked = true; setPv(k); return openPaywall(MODES[k].name); }
@@ -2060,7 +2069,8 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
       const vs = sy.getVoices().filter(v => /^en/i.test(v.lang)), pick = i => vs.length ? vs[i % vs.length] : null;
       [[2, 1.15], [1.75, 1.2]].forEach(([pitch, rate], i) => { const u = new SpeechSynthesisUtterance("Peekaboo!"); u.pitch = pitch; u.rate = rate; u.volume = 1; const v = pick(i*3); if (v) u.voice = v; sy.speak(u); });
     } catch(e){} };
-  el.addEventListener("pointerdown", () => { boom(); end(); });
+  let boomed = false; const boomOnce = () => { if (!boomed){ boomed = true; boom(); } };
+  el.addEventListener("pointerdown", () => { boomOnce(); end(); });
   rumble();
   const P = $("#iP"), B = $("#iB"), T = $("#iT"), L = el.querySelector(".introlet"), cv = $("#introFx"), x = cv.getContext("2d");
   // 1) P and B wait apart and shake, 2) fly off the sides, 3) fly back in and crash
@@ -2075,8 +2085,9 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
   P.animate(shake(dxP, -1).map((f, i) => i === 22 ? {...f, ...snap} : f).concat([wind(edgeP, -1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
   B.animate(shake(dxB, 1).map((f, i) => i === 22 ? {...f, ...snap} : f).concat([wind(edgeB, 1), {transform:"translateX(0) rotate(0) scale(1)"}]), {duration:CRASH, fill:"both"});
   setTimeout(() => {
+    if (gone) return;
     L.classList.remove("solid");
-    boom();
+    boomOnce();
     L.animate([0, -14, 12, -9, 7, -4, 0].map((v, i) => ({transform:"translate(" + v + "px," + (i % 2 ? 6 : -6)*(i < 6 ? 1 : 0) + "px) scale(" + (i === 1 ? 1.12 : 1) + ")"})), {duration:420});
     el.animate([{transform:"translate(0,0)"}, {transform:"translate(6px,-5px)"}, {transform:"translate(-6px,4px)"}, {transform:"translate(3px,2px)"}, {transform:"translate(0,0)"}], {duration:300});
     const W = cv.width = innerWidth*(devicePixelRatio || 1), Hh = cv.height = innerHeight*(devicePixelRatio || 1), cx = W/2, cy = Hh/2 - innerHeight*.12*(devicePixelRatio || 1), k = devicePixelRatio || 1;
