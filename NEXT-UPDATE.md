@@ -7,6 +7,10 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 - Make the whole app follow the purple/black theme with pink and blue accents, like the intro.
 - Home title "PEEKABOOM" now uses the pink → purple → blue blend. Done in 1.0.1.
 
+## Lobby
+- Move the "Power-ups on the map" on/off switch to page 1, right below the 6 modes (where the old mode descriptions were), so mode and power-ups are picked together.
+- Remove that switch from page 2 (map & settings). The detailed power-up settings can stay in Advanced.
+
 ## Intro
 - Letters start 20% in from each side, shake, lean back to build momentum, then slam together. Done in 1.0.1.
 - Real recording of a group of kids yelling "Peekaboo!" to replace the phone's built-in voice.
