@@ -16,7 +16,7 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 
 ## Intro
 - Letters start 20% in from each side, shake, lean back to build momentum, then slam together. Done in 1.0.1.
-- Real recording of a group of kids yelling "Peekaboo!" to replace the phone's built-in voice.
+- "Peekaboo!" voice is OFF for now (the phone voice sounded bad and played twice). Add it back only with a real recording of kids yelling "Peekaboo!" (one time, about 1 second after the crash).
 - Optional: soft music while waiting in the lobby.
 
 ## Store and money

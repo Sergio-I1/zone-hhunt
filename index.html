@@ -2025,14 +2025,25 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
   const el = $("#intro"); let gone = false;
   const end = () => { if (gone) return; gone = true; el.classList.add("done"); setTimeout(() => el.remove(), 500); };
   if (matchMedia("(prefers-reduced-motion: reduce)").matches || QS.has("test") || QS.has("nointro")){ el.remove(); return; }
-  let ac = null; const boom = () => {                  // a deep "boom" made on the fly (no sound file needed)
+  let ac = null; const boom = () => {                  // a big, echoing "BOOM" made on the fly (no sound file needed)
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume();
-      const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(38, t + .45);
-      g.gain.setValueAtTime(.9, t); g.gain.exponentialRampToValueAtTime(.001, t + .6); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .62);
-      const n = ac.createBuffer(1, ac.sampleRate*.35, ac.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*Math.pow(1 - i/d.length, 3);
-      const ns = ac.createBufferSource(), ng = ac.createGain(), f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900; ng.gain.value = .5; ns.buffer = n; ns.connect(f).connect(ng).connect(ac.destination); ns.start(t);
-      const w = ac.createOscillator(), wg = ac.createGain(); w.type = "triangle"; w.frequency.setValueAtTime(500, t - .35); w.frequency.exponentialRampToValueAtTime(1400, t);   // whoosh-ping as they fly in
-      wg.gain.setValueAtTime(0, t - .35); wg.gain.linearRampToValueAtTime(.08, t - .05); wg.gain.linearRampToValueAtTime(0, t); w.connect(wg).connect(ac.destination); w.start(Math.max(0, t - .35)); w.stop(t + .01);
+      const t = ac.currentTime, sr = ac.sampleRate, out = ac.createGain(); out.gain.value = .9; out.connect(ac.destination);
+      // reverb: a long, dark echo tail so the hit rings out
+      const ir = ac.createBuffer(2, sr*2.8, sr);
+      for (let ch = 0; ch < 2; ch++){ const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*Math.pow(1 - i/d.length, 3.2); }
+      const rev = ac.createConvolver(), wet = ac.createGain(), dark = ac.createBiquadFilter(); rev.buffer = ir; wet.gain.value = .55; dark.type = "lowpass"; dark.frequency.value = 1800;
+      const bus = ac.createGain(); bus.connect(out); bus.connect(rev); rev.connect(dark).connect(wet).connect(out);
+      // the body of the boom: a deep drop that rings
+      const o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(30, t + 1.1);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(1, t + .015); g.gain.exponentialRampToValueAtTime(.001, t + 1.4); o.connect(g).connect(bus); o.start(t); o.stop(t + 1.45);
+      const o2 = ac.createOscillator(), g2 = ac.createGain(); o2.type = "triangle"; o2.frequency.setValueAtTime(80, t); o2.frequency.exponentialRampToValueAtTime(24, t + 1.2);
+      g2.gain.setValueAtTime(.5, t); g2.gain.exponentialRampToValueAtTime(.001, t + 1.3); o2.connect(g2).connect(bus); o2.start(t); o2.stop(t + 1.35);
+      // the crack on impact
+      const n = ac.createBuffer(1, sr*.5, sr), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*Math.pow(1 - i/d.length, 4);
+      const ns = ac.createBufferSource(), ng = ac.createGain(), f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(300, t + .4); ng.gain.value = .7; ns.buffer = n; ns.connect(f).connect(ng).connect(bus); ns.start(t);
+      // whoosh as they fly in
+      const w = ac.createOscillator(), wg = ac.createGain(); w.type = "triangle"; w.frequency.setValueAtTime(500, t - .3); w.frequency.exponentialRampToValueAtTime(1400, t);
+      wg.gain.setValueAtTime(0, t - .3); wg.gain.linearRampToValueAtTime(.06, t - .05); wg.gain.linearRampToValueAtTime(0, t); w.connect(wg).connect(out); w.start(Math.max(0, t - .3)); w.stop(t + .01);
     } catch(e){} };
   const rumble = () => {                     // low shaking rumble while the letters fly in
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume();
@@ -2079,7 +2090,7 @@ $("#backBtn").addEventListener("click", () => lobbyStep(1));
       requestAnimationFrame(draw); })(t0);
     T.animate([{opacity:0, transform:"translateY(14px) scale(.9)"}, {opacity:1, transform:"none"}], {duration:450, delay:250, fill:"forwards", easing:"ease-out"});
   }, CRASH);
-  setTimeout(peekaboo, CRASH + 900);
+  // the "Peekaboo!" voice is off until we have a real recording of kids (see NEXT-UPDATE.md)
   setTimeout(end, CRASH + 2300);
 })();
 
