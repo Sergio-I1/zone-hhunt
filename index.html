@@ -11,7 +11,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Fredoka:wght@700&display=swap">
 <style>
 :root{
   --bg:#F3F1F7; --surface:#FFFFFF; --surface-2:#F8F6FB; --ink:#1B1726; --muted:#655E73; --line:#DDD7E7;
@@ -56,6 +56,16 @@ button{cursor:pointer;touch-action:manipulation}
 .msg.err{color:var(--seeker);font-weight:600}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
 .check input{margin-top:3px;accent-color:var(--accent)}
+/* opening animation: P and B crash together */
+.intro{position:fixed;inset:0;z-index:4000;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#3A1B6E,#170B2C 70%);overflow:hidden;transition:opacity .45s}
+.intro.done{opacity:0;pointer-events:none}
+#introFx{position:absolute;inset:0;width:100%;height:100%}
+.introlet{position:relative;display:flex;font-family:Fredoka,"Big Shoulders Display",system-ui,sans-serif;font-weight:700;font-size:min(42vw,220px);line-height:1;margin-top:-12vh}
+.introlet span{display:inline-block;-webkit-text-stroke:.025em #fff;paint-order:stroke fill;filter:drop-shadow(0 .04em .08em rgba(0,0,0,.45))}
+.ip{color:#FF2E8B;margin-right:-.12em;position:relative;z-index:2}.ib{color:#1A8CFF}
+.introtxt{position:absolute;top:calc(50% + min(18vw,100px));left:0;right:0;text-align:center;color:#fff;opacity:0;display:grid;gap:2px}
+.introtxt small{font:600 15px Figtree,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#D9C6FF}
+.introtxt b{font-family:"Big Shoulders Display",system-ui,sans-serif;font-weight:900;font-size:min(16vw,72px);text-transform:uppercase;line-height:1;background:linear-gradient(90deg,#FF5AA8,#A35CFF,#4DA6FF);-webkit-background-clip:text;background-clip:text;color:transparent}
 #lobby[data-step="1"] .step2,#lobby[data-step="2"] .step1{display:none!important}
 .backrow{display:flex;align-items:center;gap:12px}.backrow b{font-family:var(--font-display);font-weight:900;font-size:26px;text-transform:uppercase}
 #nextBtn{background:var(--hider)}
@@ -118,8 +128,11 @@ button{cursor:pointer;touch-action:manipulation}
 .awards{display:grid;gap:8px}
 .aw{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);opacity:0;animation:awin .45s ease-out forwards}
 .aw>i{font-style:normal;font-size:26px;text-align:center}
-.aw b{display:block;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:.03em;text-transform:uppercase;line-height:1.05}
-.aw span{font-size:13px;color:var(--muted)} .aw span strong{color:var(--ink)}
+.aw{grid-template-columns:46px minmax(0,1fr)!important;padding:12px 12px!important;border-radius:16px!important}
+.aw>i{font-size:30px!important}
+.aw p{margin:0;font-size:16.5px;line-height:1.3;font-weight:600}.aw p b{color:var(--accent)}
+.aw.me{background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.nums{margin-top:6px}.nums>summary{cursor:pointer;font-weight:700;color:var(--muted);padding:6px 0}
 @keyframes awin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .puon{margin-left:auto;align-self:center;width:22px;height:22px;flex:none;accent-color:var(--accent)}
 #home{position:relative;overflow-x:hidden}
@@ -413,6 +426,11 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 </style>
 </head>
 <body>
+<div class="intro" id="intro" aria-hidden="true">
+  <canvas id="introFx"></canvas>
+  <div class="introlet"><span class="ip" id="iP">P</span><span class="ib" id="iB">B</span></div>
+  <div class="introtxt" id="iT"><small>Welcome to</small><b>Peekaboom</b></div>
+</div>
 <div class="shelf" id="shelf" hidden><div class="shelfbox" role="dialog" aria-label="Your frames">
   <h3>Your frames <small class="msg" id="shelfCount"></small></h3>
   <p class="msg">You win a random frame after every game. Collect all 9! Tap one to wear it.</p>
@@ -638,17 +656,19 @@ input[type=range]{width:100%;accent-color:var(--zone)}
         <div class="endcard">
           <h2 id="endTitle"></h2>
           <p id="endSub"></p>
-          <h3>Awards</h3>
+          <h3>The recap</h3>
           <div class="awards" id="awards"></div>
-          <dl id="endStats"></dl>
-          <h3>Your game</h3>
-          <dl id="myStats"></dl>
-          <h3>Everyone</h3>
-          <div class="tblwrap"><table id="allStats"></table></div>
           <div class="endbtns">
+            <button class="act go" type="button" id="replayBtn">▶ Watch the chase</button>
             <button class="ghost" type="button" id="mapBtn">See it on the map</button>
-            <button class="ghost" type="button" id="replayBtn">Play time-lapse</button>
           </div>
+          <details class="nums"><summary>All the numbers</summary>
+            <dl id="endStats"></dl>
+            <h3>Your game</h3>
+            <dl id="myStats"></dl>
+            <h3>Everyone</h3>
+            <div class="tblwrap"><table id="allStats"></table></div>
+          </details>
           <div class="endbtns">
             <button class="act go" type="button" id="againBtn">Back to lobby</button>
             <button class="ghost" type="button" id="endLeaveBtn">Leave game</button>
@@ -1535,28 +1555,40 @@ let toastT = 0;
 function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; el.style.opacity = 1; clearTimeout(toastT);
   toastT = setTimeout(() => { el.style.opacity = 0; toastT = setTimeout(() => el.hidden = true, 450); }, 2400); }
 
-function awardsFor(st, w){
+function awardsFor(st, w){                    // the recap: a few funny, easy lines, the viewer's own first
   const rows = st.rows; if (rows.length < 2) return [];
-  const H = G.hist, pl = id => players.get(id) || {}, out = [], nm = id => esc(nameOf(id)), top = (arr, f, min) => { let b = null, bv = min; for (const r of arr){ const v = f(r); if (v > bv){ bv = v; b = r; } } return b ? [b, bv] : null; };
+  const H = G.hist, pl = id => players.get(id) || {}, mine = [], rest = [];
+  const who = r => r.id === me.id ? "You" : "<b>" + esc(r.name) + "</b>", whoL = r => r.id === me.id ? "you" : "<b>" + esc(r.name) + "</b>";
+  const was = r => r.id === me.id ? "were" : "was", has = r => r.id === me.id ? "" : "s";
   const took = r => r.id === me.id ? me.took.length : (pl(r.id).took || []).length, hits = r => H.filter(h => h.k === "hit" && h.id === r.id).length;
-  const outAt = r => { const h = H.find(h => h.id === r.id && OUTK[h.k]); return h ? h.t : null; };
-  const add = (e, t, r, txt) => r && out.push('<div class="aw" style="animation-delay:' + (out.length*.12 + .2).toFixed(2) + 's"><i>' + e + "</i><div><b>" + t + "</b><span><strong>" + esc(r.name) + "</strong> · " + txt + "</span></div></div>");
-  let a;
-  if ((a = top(rows, r => r.wk || 0, 30))) add("🗺️", "Google Maps Intern", a[0], "walked the most, " + walkTxt(a[1]));
-  const sitters = rows.filter(r => r.start === "hider" && r.hid >= 90 && r.wk != null);
-  if (sitters.length && rows.some(r => r.wk > 30)){ const b = sitters.reduce((x, y) => (y.wk || 0) < (x.wk || 0) ? y : x); add("🗿", "Professional Statue", b, "barely moved: " + walkTxt(b.wk || 1)); }
-  if ((a = top(rows, r => r.tags, 0))) add("🎯", "Tag Machine", a[0], a[1] + " tag" + (a[1] === 1 ? "" : "s"));
-  if (cfg.mode !== "sardines" && (a = top(rows.filter(r => r.start === "hider"), r => r.hid, 0))) add("🕶️", "Witness Protection", a[0], "hid for " + fmt(a[1]));
-  const firstOut = rows.filter(r => outAt(r) != null).sort((x, y) => outAt(x) - outAt(y))[0];
-  if (firstOut) add("⚡", "Speedrun Any%", firstOut, "first one out, at " + fmt(outAt(firstOut)));
-  const fb = H.filter(h => h.by && (OUTK[h.k] || h.k === "hit"))[0]; if (fb) add("🐦", "Early Bird", rows.find(r => r.id === fb.by), "first tag of the game, at " + fmt(fb.t));
-  if ((a = top(rows, took, 0))) add("🛍️", "Shopaholic", a[0], "grabbed " + a[1] + " power-up" + (a[1] === 1 ? "" : "s"));
-  if ((a = top(rows.filter(r => r.free || cfg.mode === "freeze"), hits, 0))) add("🐈", "Nine Lives", a[0], "got tagged " + a[1] + "× and kept going");
-  if (w === "seekers"){ const last = rows.filter(r => outAt(r) != null).sort((x, y) => outAt(y) - outAt(x))[0]; if (last && last !== firstOut) add("👑", "Final Boss", last, "last hider standing, until " + fmt(outAt(last))); }
-  if ((a = top(rows, r => H.filter(h => h.k === "thawed" && h.by === r.id).length, 0))) add("🦸", "Ice Breaker", a[0], "unfroze " + a[1] + " teammate" + (a[1] === 1 ? "" : "s"));
-  const zo = H.find(h => h.k === "zoneout"); if (zo) add("🌀", "Zone? What Zone?", rows.find(r => r.id === zo.id), "got eaten by the zone");
-  const sf = rows.filter(r => r.found != null).sort((x, y) => x.found - y.found)[0]; if (sf) add("🐟", "Sardine Sniffer", sf, "found the hiding spot first");
-  return out.slice(0, 10);
+  const outH = r => H.find(h => h.id === r.id && OUTK[h.k]), outAt = r => { const h = outH(r); return h ? h.t : null; };
+  const add = (e, html, r) => (r && r.id === me.id ? mine : rest).push({e, html, me: !!(r && r.id === me.id)});
+  const meRow = rows.find(r => r.id === me.id);
+  if (meRow){                                 // about you
+    const caught = H.filter(h => h.by === me.id && OUTK[h.k]).sort((a, b) => a.t - b.t);
+    if (caught.length >= 2){ const f = caught[0], l = caught[caught.length - 1];
+      add("👀", "You found <b>" + esc(nameOf(f.id)) + "</b> in " + fmt(f.t) + "… but <b>" + esc(nameOf(l.id)) + "</b> took you " + fmt(l.t) + "!", meRow); }
+    else if (caught.length === 1) add("🎯", "You found <b>" + esc(nameOf(caught[0].id)) + "</b> at " + fmt(caught[0].t) + ". Gotcha!", meRow);
+    const mo = outH(meRow);
+    if (mo && mo.by) add("😱", "<b>" + esc(nameOf(mo.by)) + "</b> found you at " + fmt(mo.t) + ". So close!", meRow);
+    else if (meRow.start === "hider" && meRow.free && cfg.mode !== "sardines") add("🥷", "Nobody found you. Ninja.", meRow);
+  }
+  const most = rows.filter(r => (r.wk || 0) > 30).sort((a, b) => b.wk - a.wk)[0];
+  if (most) add("🏃", who(most) + " walked " + walkTxt(most.wk).split(" (")[0] + ". That's basically a marathon.", most);
+  const sit = rows.filter(r => r.start === "hider" && r.hid >= 90 && r !== most).sort((a, b) => (a.wk || 0) - (b.wk || 0))[0];
+  if (sit && most) add("🗿", who(sit) + " barely moved the whole game. Statue mode.", sit);
+  const first = rows.filter(r => outAt(r) != null).sort((a, b) => outAt(a) - outAt(b))[0];
+  if (first && !(first.id === me.id && mine.length)) add("😅", who(first) + " " + was(first) + " out first, at " + fmt(outAt(first)) + ".", first);
+  if (w === "seekers"){ const last = rows.filter(r => outAt(r) != null).sort((a, b) => outAt(b) - outAt(a))[0];
+    if (last && last !== first) add("👑", who(last) + " " + was(last) + " the last one hiding. Respect.", last); }
+  const tg = rows.filter(r => r.tags >= 2).sort((a, b) => b.tags - a.tags)[0]; if (tg) add("🎯", who(tg) + " tagged " + tg.tags + " people. Unstoppable.", tg);
+  const nl = rows.filter(r => r.free && hits(r) > 0)[0]; if (nl) add("🐈", who(nl) + " got tagged and kept running anyway.", nl);
+  const sh = rows.filter(r => took(r) >= 2).sort((a, b) => took(b) - took(a))[0]; if (sh) add("🛍️", who(sh) + " grabbed " + took(sh) + " power-ups. Shopping spree.", sh);
+  const zo = H.find(h => h.k === "zoneout"); if (zo){ const r = rows.find(x => x.id === zo.id); if (r) add("🌀", who(r) + " got eaten by the zone. Oops.", r); }
+  const th = rows.map(r => [r, H.filter(h => h.k === "thawed" && h.by === r.id).length]).filter(x => x[1]).sort((a, b) => b[1] - a[1])[0];
+  if (th) add("🦸", who(th[0]) + " unfroze " + th[1] + " friend" + (th[1] === 1 ? "" : "s") + ". Hero.", th[0]);
+  const sf = rows.filter(r => r.found != null).sort((a, b) => a.found - b.found)[0]; if (sf) add("🐟", who(sf) + " sniffed out the hiding spot first.", sf);
+  return mine.concat(rest).slice(0, 6).map((x, i) => '<div class="aw' + (x.me ? " me" : "") + '" style="animation-delay:' + (i*.15 + .2).toFixed(2) + 's"><i>' + x.e + "</i><p>" + x.html + "</p></div>");
 }
 function wonGame(r, w, lastS){ return w === "seekers" ? r.start === "seeker" : w === "hiders" ? (cfg.mode === "sardines" ? r.start === "hider" : r.free) : w === "packed" ? !(lastS && lastS.id === r.id) : false; }
 function showEnd(w){
@@ -1588,7 +1620,7 @@ function showEnd(w){
     '<tr><td><i class="mark ' + r.start + '"></i>' + esc(r.name) + "<small>Started as " + r.start + (r.tm != null ? " · " + esc(tinfo(r.tm).icon + " " + tinfo(r.tm).name) : "") + '</small></td><td class="num">' + (r.hid ? fmt(r.hid) : "–") + "</td><td>" + esc(r.what) + '</td><td class="num">' + r.tags + '</td><td class="num">' + walkTxt(r.wk) + "</td></tr>").join("");
   $("#replayBtn").hidden = !(cfg.replay && G.tracks.size);
   $("#mapBtn").hidden = !G.hist.some(h => h.lat != null && (OUTK[h.k] || h.k === "found"));
-  $("#awards").innerHTML = awardsFor(st, w).join("") || '<p class="msg">Play with more people to earn awards.</p>';
+  $("#awards").innerHTML = awardsFor(st, w).join("") || '<p class="msg">Play with more people for a recap.</p>';
   const gk = code + ":" + cfg.t0, won = wonGame(mine, w, lastS);
   if (store.get("pb-last") !== gk){ store.set("pb-last", gk);
     const hs = (store.get("pb-hist") || []).concat([{r:mine.start, w:won}]).slice(-60); store.set("pb-hist", hs);
@@ -1966,6 +1998,43 @@ function prizeMachine(){                    // the gumball machine: turn, drop, 
 
 $("#nextBtn").addEventListener("click", () => lobbyStep(2));
 $("#backBtn").addEventListener("click", () => lobbyStep(1));
+
+/* ---------------- opening animation ---------------- */
+(function intro(){
+  const el = $("#intro"); let gone = false;
+  const end = () => { if (gone) return; gone = true; el.classList.add("done"); setTimeout(() => el.remove(), 500); };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || QS.has("test") || QS.has("nointro")){ el.remove(); return; }
+  let ac = null; const boom = () => {                  // a deep "boom" made on the fly (no sound file needed)
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume();
+      const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(38, t + .45);
+      g.gain.setValueAtTime(.9, t); g.gain.exponentialRampToValueAtTime(.001, t + .6); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + .62);
+      const n = ac.createBuffer(1, ac.sampleRate*.35, ac.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2 - 1)*Math.pow(1 - i/d.length, 3);
+      const ns = ac.createBufferSource(), ng = ac.createGain(), f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900; ng.gain.value = .5; ns.buffer = n; ns.connect(f).connect(ng).connect(ac.destination); ns.start(t);
+      const w = ac.createOscillator(), wg = ac.createGain(); w.type = "triangle"; w.frequency.setValueAtTime(500, t - .35); w.frequency.exponentialRampToValueAtTime(1400, t);   // whoosh-ping as they fly in
+      wg.gain.setValueAtTime(0, t - .35); wg.gain.linearRampToValueAtTime(.08, t - .05); wg.gain.linearRampToValueAtTime(0, t); w.connect(wg).connect(ac.destination); w.start(Math.max(0, t - .35)); w.stop(t + .01);
+    } catch(e){} };
+  el.addEventListener("pointerdown", () => { boom(); end(); });
+  const P = $("#iP"), B = $("#iB"), T = $("#iT"), L = el.querySelector(".introlet"), cv = $("#introFx"), x = cv.getContext("2d");
+  const fly = {duration:520, easing:"cubic-bezier(.5,0,.9,.5)", fill:"both"};
+  P.animate([{transform:"translateX(-120vw) rotate(-25deg)"}, {transform:"translateX(0) rotate(0)"}], fly);
+  B.animate([{transform:"translateX(120vw) rotate(25deg)"}, {transform:"translateX(0) rotate(0)"}], fly);
+  setTimeout(() => {
+    boom();
+    L.animate([0, -14, 12, -9, 7, -4, 0].map((v, i) => ({transform:"translate(" + v + "px," + (i % 2 ? 6 : -6)*(i < 6 ? 1 : 0) + "px) scale(" + (i === 1 ? 1.12 : 1) + ")"})), {duration:420});
+    el.animate([{transform:"translate(0,0)"}, {transform:"translate(6px,-5px)"}, {transform:"translate(-6px,4px)"}, {transform:"translate(3px,2px)"}, {transform:"translate(0,0)"}], {duration:300});
+    const W = cv.width = innerWidth*(devicePixelRatio || 1), Hh = cv.height = innerHeight*(devicePixelRatio || 1), cx = W/2, cy = Hh/2 - innerHeight*.12*(devicePixelRatio || 1), k = devicePixelRatio || 1;
+    const parts = Array.from({length:70}, () => { const a = Math.random()*Math.PI*2, v = (4 + Math.random()*11)*k; return {x:cx, y:cy, vx:Math.cos(a)*v, vy:Math.sin(a)*v, r:(1.5 + Math.random()*3.5)*k, c:["#B38CFF","#FF5AA8","#4DA6FF","#ffffff","#8445F0"][Math.random()*5|0]}; });
+    let t0 = performance.now();
+    (function draw(now){ const f = Math.max(0, (now - t0)/1000); if (f > 1.6 || gone) return; x.clearRect(0, 0, W, Hh);
+      x.globalAlpha = Math.max(0, 1 - f*1.4); x.beginPath(); x.arc(cx, cy, (40 + f*900)*k, 0, Math.PI*2); x.strokeStyle = "#B38CFF"; x.lineWidth = 6*k; x.stroke();
+      if (f < .12){ x.globalAlpha = 1 - f/.12; x.fillStyle = "#fff"; x.fillRect(0, 0, W, Hh); }
+      x.globalAlpha = Math.max(0, 1 - f/1.4);
+      for (const p of parts){ p.x += p.vx; p.y += p.vy; p.vx *= .96; p.vy = p.vy*.96 + .12*k; x.beginPath(); x.arc(p.x, p.y, p.r, 0, Math.PI*2); x.fillStyle = p.c; x.fill(); }
+      requestAnimationFrame(draw); })(t0);
+    T.animate([{opacity:0, transform:"translateY(14px) scale(.9)"}, {opacity:1, transform:"none"}], {duration:450, delay:250, fill:"forwards", easing:"ease-out"});
+  }, 520);
+  setTimeout(end, 2700);
+})();
 
 /* ---------------- home background: a pretend game running behind the buttons ---------------- */
 const homeBg = (() => { try {
