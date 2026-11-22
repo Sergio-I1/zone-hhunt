@@ -16,7 +16,7 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 
 ## Intro
 - Letters start 20% in from each side, shake, lean back to build momentum, then slam together. Done in 1.0.1.
-- "Peekaboo!" voice: DONE. Sergio's own recording (assets/peekaboo.mp3) is pitched up, tuned and cleaned, and plays once 0.4s after the crash. Could swap in a kids' group recording later.
+- "Peekaboo!" voice: DONE. Sergio's own recording (assets/peekaboo.mp3) is cleaned up, a little higher, keeps his natural pitch, plays once 0.4s after the crash. Could swap in a kids' group recording later.
 - Optional: soft music while waiting in the lobby.
 
 ## Store and money
