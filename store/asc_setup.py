@@ -136,4 +136,13 @@ def _():
         "relationships": {"app": {"data": {"type": "apps", "id": APP}}, "territoryAvailabilities": {"data": data}}}, "included": inc}, ok=(200, 201, 204, 409))
     print("   territories:", len(terr), "available:", len([t for t in terr if t not in SKIP]), "ok" if r is not None else "failed")
 
+@step("expire101")
+def _():
+    if "expire101" not in ONLY: return print("   skipped (only runs when asked by name)")
+    bs = call("GET", f"/v1/builds?filter[app]={APP}&filter[preReleaseVersion.version]=1.0.1&limit=50")["data"]
+    for b in bs:
+        if b["attributes"].get("expired"): print("   build", b["attributes"]["version"], "already expired"); continue
+        r = call("PATCH", f"/v1/builds/{b['id']}", {"data": {"type": "builds", "id": b["id"], "attributes": {"expired": True}}})
+        print("   expired 1.0.1 build", b["attributes"]["version"], "ok" if r is not None else "failed")
+
 print("\nDone.")
