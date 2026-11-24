@@ -32,7 +32,8 @@ infos = call("GET", f"/v1/apps/{APP}/appInfos")["data"]
 info = next((i for i in infos if i["attributes"].get("appStoreState") in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED") or i["attributes"].get("state") in ("PREPARE_FOR_SUBMISSION",)), infos[0])
 INFO = info["id"]
 vers = call("GET", f"/v1/apps/{APP}/appStoreVersions?filter[platform]=IOS")["data"]
-ver = next(v for v in vers if v["attributes"]["appStoreState"] in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED"))
+for v in vers: print("  ", v["attributes"]["versionString"], v["attributes"]["appStoreState"])
+ver = next((v for v in vers if v["attributes"]["appStoreState"] in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED")), vers[0])
 VER = ver["id"]; print("version", ver["attributes"]["versionString"], ver["attributes"]["appStoreState"])
 
 DESC = open(os.path.join(os.path.dirname(__file__), "description.txt")).read().strip()
