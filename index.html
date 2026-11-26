@@ -244,6 +244,22 @@ input[type=range]{width:100%;accent-color:var(--zone)}
 .mapslot.full{position:absolute;inset:0}
 #map{width:100%;height:100%;background:var(--surface-2)}
 .over{position:absolute;z-index:1100}
+.radar{right:max(10px,env(safe-area-inset-right));bottom:26px;display:grid;justify-items:center;gap:4px;padding:8px 10px 6px;border-radius:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);min-width:74px}
+.rbars{display:flex;align-items:flex-end;gap:4px;height:40px}
+.rbars i{width:9px;border-radius:3px;background:color-mix(in srgb,var(--muted) 35%,transparent);transition:background .3s}
+.rbars i:nth-child(1){height:25%}.rbars i:nth-child(2){height:50%}.rbars i:nth-child(3){height:75%}.rbars i:nth-child(4){height:100%}
+.radar[data-n="1"] .rbars i:nth-child(-n+1),.radar[data-n="2"] .rbars i:nth-child(-n+2),.radar[data-n="3"] .rbars i:nth-child(-n+3),.radar[data-n="4"] .rbars i{background:#FF3B4E}
+.radar[data-n="4"]{animation:rpulse .8s ease-in-out infinite;border-color:#FF3B4E}
+@keyframes rpulse{50%{box-shadow:0 0 0 6px rgba(255,59,78,.25)}}
+#radarTxt{font-size:11px;font-weight:800;color:var(--ink);white-space:nowrap}
+.bigswitch{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1.5px solid var(--line);border-radius:16px;background:var(--surface);cursor:pointer}
+.bigswitch input{position:absolute;opacity:0;width:1px;height:1px}
+.bswtxt{display:grid;gap:2px;min-width:0}.bswtxt b{font-size:16px}.bswtxt small{color:var(--muted);font-size:12.5px}
+.bswtrack{width:62px;height:34px;border-radius:99px;background:color-mix(in srgb,var(--muted) 40%,transparent);position:relative;transition:background .2s}
+.bswtrack i{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.bigswitch input:checked + .bswtxt + .bswtrack{background:#FF3B4E}.bigswitch input:checked + .bswtxt + .bswtrack i{transform:translateX(28px)}
+.bigswitch input:focus-visible + .bswtxt + .bswtrack{outline:2px solid var(--accent);outline-offset:2px}
+.bigswitch:has(input:disabled){opacity:.6;cursor:default}
 .alert{top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 120px);padding:8px 14px;border-radius:10px;font-weight:700;font-size:14px;color:#fff;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2);pointer-events:none}
 .alert.danger{background:var(--seeker)} .alert.spot{background:var(--hider)} .alert.zone{background:var(--zone)}
 .toast{left:50%;top:42%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;font-family:var(--font-display);font-weight:800;font-size:24px;text-transform:uppercase;text-align:center;max-width:min(86%,420px);box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:opacity .4s}
@@ -610,6 +626,9 @@ input[type=range]{width:100%;accent-color:var(--zone)}
             <div class="slider"><div class="top"><label class="lbl" for="sHead">Head start</label><output id="oHead"></output></div><input type="range" id="sHead" min="30" max="300" step="30"><small>Seekers wait while hiders scatter.</small></div>
             <div class="slider"><div class="top"><label class="lbl" for="sLives">Lives</label><output id="oLives"></output></div><input type="range" id="sLives" min="1" max="3" step="1"><small>Tags before you're out.</small></div>
           </div>
+          <label class="bigswitch"><input type="checkbox" id="cRadar" role="switch">
+            <span class="bswtxt"><b>📶 Danger meter</b><small>Hiders see red bars that fill up as the closest seeker gets near.</small></span>
+            <span class="bswtrack" aria-hidden="true"><i></i></span></label>
         </section>
         <details class="adv step2">
           <summary>Advanced settings</summary>
@@ -677,6 +696,7 @@ input[type=range]{width:100%;accent-color:var(--zone)}
       <div class="over legend" aria-hidden="true">
         <span><i class="mark hider"></i>Hider</span><span><i class="mark seeker"></i>Seeker</span><span><i class="ring"></i>Next zone</span>
       </div>
+      <div class="over radar" id="radar" hidden role="status" aria-live="polite"><div class="rbars" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span id="radarTxt">No seeker near</span></div>
       <div class="over jam" id="jam" hidden></div>
       <div class="over alert zone" id="replayClock" hidden></div>
       <button class="over resbtn act go" type="button" id="resBtn" hidden>Back to results</button>
@@ -1028,7 +1048,7 @@ async function createGame(){
   if (!c){ busy(false); return homeMsg("Couldn't reach the game server. Check your connection and try again.", true); }
   code = makeCode(idx); await derive(code);
   cfg = {rev:1, host:me.id, phase:"lobby", mode:"classic", minutes:15, head:60, ping:2, startR:250, endR:30, shrinks:4, center:null, zones:null, t0:null,
-         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, tagCd:30, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, premium, powerups:premium, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, items:null};
+         randomRoles:false, nSeekers:1, roles:null, lives:2, grace:30, tagR:20, tagCd:30, teams:false, nTeams:2, teamVis:true, teamInfo:null, tmap:null, replay:true, premium, powerups:premium, plimit:5, pstack:true, itemSeq:0, pdur:30, pingNames:true, freezeReset:true, radar:false, items:null};
   me.role = "hider"; me.st = "active";
   wire(c); startGPS();
   if (test) cfg.center = {lat:29.8884, lng:-97.9384};
@@ -1097,7 +1117,7 @@ function onPhase(prev){
 const SL = [["sMin","oMin","minutes", v => v + " min"], ["sHead","oHead","head", v => fmt(v)], ["sPing","oPing","ping", v => v + " min"],
             ["sStart","oStart","startR", v => v + " m"], ["sEnd","oEnd","endR", v => v + " m"], ["sShr","oShr","shrinks", v => v + "×"],
             ["sLives","oLives","lives", v => v + (v == 1 ? " life" : " lives")], ["sGrace","oGrace","grace", v => v + " s"], ["sTagR","oTagR","tagR", v => v + " m"], ["sPdur","oPdur","pdur", v => v + " s"], ["sTagCd","oTagCd","tagCd", v => v ? v + " s" : "Off"]];
-const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"], ["cReplay","replay"], ["cTeams","teams"], ["cTeamVis","teamVis"]];
+const CK = [["cPow","powerups"], ["cNames","pingNames"], ["cRefill","freezeReset"], ["cRand","randomRoles"], ["cStack","pstack"], ["cReplay","replay"], ["cTeams","teams"], ["cTeamVis","teamVis"], ["cRadar","radar"]];
 SL.push(["sTeams","oTeams","nTeams", v => v + " teams"]);
 SL.push(["sPlim","oPlim","plimit", v => v + " in play"]);
 const poolTypes = () => Object.keys(ITEMS).filter(k => !(cfg.puOff || []).includes(k) && !((k === "star" || k === "detour") && cfg.mode === "sardines") && !(k === "rat" && cfg.mode === "manhunt") && !(k === "swap" && !cfg.pingNames && cfg.mode !== "manhunt"));
@@ -1704,12 +1724,25 @@ function showEnd(w){
 }
 
 /* ---------------- main tick ---------------- */
+// Danger meter: hiders see how close the nearest seeker is (bars only, never a name or direction)
+const RADAR_STEPS = [[25,4,"Seeker very close!"],[50,3,"Seeker close"],[100,2,"Seeker nearby"],[160,1,"Seeker in range"]];
+function renderRadar(){
+  const el = $("#radar"); if (!el) return;
+  const show = !!(cfg && cfg.radar && cfg.phase === "live" && G.hunt && me.role === "hider" && me.st === "active" && me.lat != null);
+  el.hidden = !show; if (!show) return;
+  let d = Infinity; const now = Date.now();
+  for (const p of players.values()) if (p.id !== me.id && p.role === "seeker" && p.st === "active" && p.lat != null && now - p.seen < STALE) d = Math.min(d, dist(me, p));
+  const step = RADAR_STEPS.find(r => d <= r[0]), n = step ? step[1] : 0;
+  if (el.dataset.n !== String(n)){ if (n > (+el.dataset.n || 0) && n >= 3) try { navigator.vibrate && navigator.vibrate(n === 4 ? [80,60,80] : 60); } catch(e){}
+    el.dataset.n = n; $("#radarTxt").textContent = step ? step[2] : "No seeker near"; }
+}
 function tick(){
   if (!cfg || !N.client) return;
   const now = Date.now();
   if (now - lastPub > 4000) pubMe();
   for (const [id, p] of players) if (id !== me.id && now - p.seen > (cfg.phase === "lobby" ? 45000 : 900000)) players.delete(id);
   if (cfg.phase === "lobby"){ G.over = false; renderLobby(); renderMap(); return; }
+  try { renderRadar(); } catch(e){}
 
   if (cfg.phase === "live") for (const p of players.values()){ if (p.id === me.id || p.st !== "active") continue;   // lost-connection countdown
     const gone = now - p.seen, k = gone > DROP ? 2 : gone > STALE ? 1 : 0, was = G.drop.get(p.id) || 0;

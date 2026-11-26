@@ -34,3 +34,5 @@ Ideas and to-dos saved for the next app update (1.0.1 and later).
 - "Last one found" mode: the last hider found wins (maybe also points for how long each person lasted).
 - Teams now: tap a team to join it, ✏️ renames (host), tapping a player's team tag opens a team list. Only hiders are on teams.
 - Secret teams (Sergio): with Secret roles + Teams, teams mix secret hiders and seekers. You can't tag your own teammate; the team that gets the other teams out first wins.
+- Danger meter (built Nov 25, in TestFlight build 43+, not yet on the App Store): host switch in Game settings; hiders see 0-4 red bars for the closest seeker (160/100/50/25 m), phone buzzes at 3-4 bars.
+- Idea (Sergio): "Sound bomb" power-up that makes other players' phones ring/make noise.
